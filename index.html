@@ -81,10 +81,6 @@
           (Tereza Unarová, info@smyslokoutek.cz) provozovatelem Smyslokoutek pro účely vyřízení rezervace a související komunikace.
         </label>
       </div>
-      <div class="check">
-        <input id="marketing" type="checkbox" />
-        <label for="marketing">Chci dostávat novinky a tipy e-mailem (volitelné, lze kdykoli odhlásit).</label>
-      </div>
 
       <div style="margin-top:12px">
         <div id="price" class="price">Cena: –</div>
@@ -132,7 +128,7 @@ const termsBox = el('terms'), noTerms = el('noTerms');
 const qtyInput = el('qty'), leftTag = el('leftTag'), priceEl = el('price'), discHint = el('discountHint');
 const btn = el('reserveBtn'), toast = el('toast'), errBox = el('error');
 const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty');
-const nameEl = el('name'), emailEl = el('email'), gdprEl = el('gdpr'), marketingEl = el('marketing');
+const nameEl = el('name'), emailEl = el('email'), gdprEl = el('gdpr');
 
 let EVENTS = [], selected = null;
 const fmt = n => (Math.round(n*100)/100).toFixed(2);
@@ -194,7 +190,6 @@ document.getElementById('reserveBtn').addEventListener('click', async ()=>{
         consent: true,
         consentAt: new Date().toISOString(),
         policyVersion: POLICY_VERSION,
-        marketing: !!marketingEl.checked,
         ua: navigator.userAgent
       })
     }).then(x=>x.json());

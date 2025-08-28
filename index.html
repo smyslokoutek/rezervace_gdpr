@@ -114,13 +114,13 @@
 
 <script>
 /* ===== KONFIGURACE – UPRAVTE ===== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAJh9wVawvTfLUfsi7qqtkxyaT5Hpm69gyAlwNROW8N5S-MEIrOSW541caGaRQ5ysl_g/exec';                  // ← tvoje /exec URL
-const IBAN    = 'TVŮJ_IBAN_BEZ_MEZER';             // např. CZ5855000000001265098001
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAJh9wVawvTfLUfsi7qqtkxyaT5Hpm69gyAlwNROW8N5S-MEIrOSW541caGaRQ5ysl_g/exec'; // tvoje /exec URL
+const IBAN    = 'TVŮJ_IBAN_BEZ_MEZER';     // např. CZ5855000000001265098001
 const CURRENCY = 'CZK';
 const DISCOUNT_FOR_2PLUS = 20;
-const MSG_BASE = 'Smyslohraní';
+const MSG_BASE = 'SMYSLOHRANI';            // bez diakritiky kvůli bankám
 const VS_PREFIX = '2509';
-const POLICY_VERSION = '2025-08-28';               // verze zásad, která se uloží k rezervaci
+const POLICY_VERSION = '2025-08-28';
 /* ================================= */
 
 const el = id => document.getElementById(id);
@@ -131,12 +131,32 @@ const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el
 const nameEl = el('name'), emailEl = el('email'), gdprEl = el('gdpr');
 
 let EVENTS = [], selected = null;
+
+// ===== Helpery =====
 const fmt = n => (Math.round(n*100)/100).toFixed(2);
 const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
 function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
 function compute(pricePer, q){ let t = pricePer*q; if(q>=2) t*= (1 - DISCOUNT_FOR_2PLUS/100); return t; }
 function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
 function renderQR(payload){ qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload); spaydEl.textContent=payload; qrEmpty.style.display='none'; qrBox.style.display='block'; }
+
+// Odstranění diakritiky + povolené znaky pro banky
+function sanitizeMsg(s) {
+  let t = (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  t = t.replace(/[^A-Za-z0-9 .,_-]/g, ' ');
+  t = t.replace(/\s+/g, ' ').trim().toUpperCase();
+  return t.slice(0, 60);
+}
+// Datum do zprávy (bez teček / bulletů)
+function formatForMsg(iso) {
+  const d = new Date(iso);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
 
 function renderTerms(data){
   termsBox.innerHTML=''; if(!data.length){ noTerms.style.display='block'; return; } noTerms.style.display='none';
@@ -196,8 +216,12 @@ document.getElementById('reserveBtn').addEventListener('click', async ()=>{
 
     if(!resp.ok){ errBox.textContent = (resp.error || 'Rezervace se nepodařila.'); btn.disabled=false; return; }
 
-    const when = cz(resp.event.start), vs = makeVS();
-    const msg  = `${MSG_BASE} • ${when} • ${q} míst • ${(nameEl.value||'')}`;
+    // --- Bezpečná zpráva pro banku (bez diakritiky a nepovolených znaků) ---
+    const whenPlain = formatForMsg(resp.event.start);
+    const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${(nameEl.value||'')}`;
+    const msg       = sanitizeMsg(rawMsg);
+
+    const vs   = makeVS();
     const payload = spayd(IBAN, resp.total, msg, vs);
     renderQR(payload);
 

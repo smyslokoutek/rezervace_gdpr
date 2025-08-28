@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rezervace Smyslokoutek – výběr termínu & QR platba</title>
+<style>
+  :root{--ink:#0b0b0b;--muted:#6b7280;--ok:#16a34a;--bad:#dc2626;--brand:#0ea5e9;--card:#fff;--bg:#f6f7fb;--soft:#eef2ff;--radius:16px;--shadow:0 10px 30px rgba(0,0,0,.08)}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:20px}
+  .hero{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+  .hero h1{margin:0 0 6px;font-size:22px}.hero p{margin:0;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}@media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+  .term-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:700px){.term-list{grid-template-columns:1fr}}
+  .term{border:1px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;background:#fff;transition:.15s}
+  .term:hover{border-color:#c7d2fe;background:var(--soft)}.term.active{outline:2px solid var(--brand);border-color:transparent;background:var(--soft)}
+  .term h3{margin:0 0 8px;font-size:16px}.term .meta{font-size:13px;color:var(--muted)}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0}
+  .stepper{display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+  .stepper button{border:0;background:#f3f4f6;width:40px;height:40px;font-size:20px;cursor:pointer}
+  .stepper input{width:70px;height:40px;border:0;text-align:center;font-size:16px}
+  label{font-weight:600}
+  input[type="text"],input[type="email"]{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
+  .check{display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:14px}
+  .check input{margin-top:2px}
+  .price{font-weight:700}.hint{color:var(--muted);font-size:13px}
+  .btn{appearance:none;border:0;border-radius:12px;background:#111;color:#fff;padding:12px 16px;font-weight:700;cursor:pointer}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  .note{font-size:13px;color:var(--muted)}
+  .qrbox{display:none;margin-top:10px}
+  .qrwrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .qrwrap img{width:240px;height:240px;box-shadow:var(--shadow);border-radius:12px;background:#fff}
+  code{background:#f3f4f6;padding:8px;border-radius:8px;display:block;word-break:break-all}
+  .tag{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+  .error{color:var(--bad);font-weight:600}
+  .toast{display:none;margin-top:8px;border-left:4px solid var(--ok);background:#ecfdf5;padding:10px;border-radius:8px}
+  .empty{border:1px dashed #d1d5db;border-radius:12px;padding:16px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>Rezervace smyslohraní</h1>
+    <p>Vyberte termín, počet míst a vyplňte e-mail. Při <strong>2 a více místech</strong> se automaticky uplatní sleva.</p>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2 style="margin:0 0 10px;">1) Vyberte termín</h2>
+      <div id="terms" class="term-list"></div>
+      <div id="noTerms" class="empty" style="display:none;">Momentálně nejsou vypsané žádné budoucí termíny.</div>
+
+      <div class="controls">
+        <div>
+          <label>Počet míst</label><br/>
+          <div class="stepper">
+            <button type="button" id="minus">−</button>
+            <input id="qty" type="number" min="1" value="1" />
+            <button type="button" id="plus">+</button>
+          </div>
+        </div>
+        <div><span class="tag" id="leftTag">Zbývá: −</span></div>
+      </div>
+
+      <div style="margin-top:10px">
+        <label>Jméno dítěte (nebo dětí)</label>
+        <input id="name" type="text" placeholder="např. Anna a Tomáš" />
+      </div>
+      <div style="margin-top:10px">
+        <label>E-mail pro potvrzení</label>
+        <input id="email" type="email" placeholder="např. maminka@..." />
+        <div class="hint">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
+      </div>
+
+      <!-- GDPR souhlasy -->
+      <div class="check">
+        <input id="gdpr" type="checkbox" />
+        <label for="gdpr">
+          Souhlasím se <a href="https://www.smyslokoutek.cz/podminky-ochrany-osobnich-udaju/" target="_blank" rel="noopener">zpracováním osobních údajů</a>
+          (Tereza Unarová, info@smyslokoutek.cz) provozovatelem Smyslokoutek pro účely vyřízení rezervace a související komunikace.
+        </label>
+      </div>
+      <div class="check">
+        <input id="marketing" type="checkbox" />
+        <label for="marketing">Chci dostávat novinky a tipy e-mailem (volitelné, lze kdykoli odhlásit).</label>
+      </div>
+
+      <div style="margin-top:12px">
+        <div id="price" class="price">Cena: –</div>
+        <div id="discountHint" class="hint"></div>
+      </div>
+
+      <div style="margin-top:14px">
+        <button id="reserveBtn" class="btn">Rezervovat a zobrazit QR</button>
+        <div id="toast" class="toast">Rezervace uložena. Níže se zobrazil QR kód k platbě.</div>
+        <div id="error" class="error"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="margin:0 0 10px;">2) Zaplaťte QR platbou</h2>
+      <div class="hint">Naskenujte QR kód ve své bankovní aplikaci. Variabilní symbol a zpráva jsou vyplněny automaticky.</div>
+      <div id="qrbox" class="qrbox">
+        <div class="qrwrap">
+          <img id="qr" alt="QR platba" />
+          <div style="flex:1 1 280px">
+            <div><strong>SPAYD řetězec</strong></div>
+            <code id="spayd"></code>
+            <div class="note">Pokud by sken nešel, použijte běžný převod a zadejte částku a VS ručně.</div>
+          </div>
+        </div>
+      </div>
+      <div id="qrEmpty" class="empty">QR kód se zobrazí po potvrzení rezervace.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== KONFIGURACE – UPRAVTE ===== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAJh9wVawvTfLUfsi7qqtkxyaT5Hpm69gyAlwNROW8N5S-MEIrOSW541caGaRQ5ysl_g/exec';                  // ← tvoje /exec URL
+const IBAN    = 'TVŮJ_IBAN_BEZ_MEZER';             // např. CZ5855000000001265098001
+const CURRENCY = 'CZK';
+const DISCOUNT_FOR_2PLUS = 20;
+const MSG_BASE = 'Smyslohraní';
+const VS_PREFIX = '2509';
+const POLICY_VERSION = '2025-08-28';               // verze zásad, která se uloží k rezervaci
+/* ================================= */
+
+const el = id => document.getElementById(id);
+const termsBox = el('terms'), noTerms = el('noTerms');
+const qtyInput = el('qty'), leftTag = el('leftTag'), priceEl = el('price'), discHint = el('discountHint');
+const btn = el('reserveBtn'), toast = el('toast'), errBox = el('error');
+const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty');
+const nameEl = el('name'), emailEl = el('email'), gdprEl = el('gdpr'), marketingEl = el('marketing');
+
+let EVENTS = [], selected = null;
+const fmt = n => (Math.round(n*100)/100).toFixed(2);
+const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
+function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
+function compute(pricePer, q){ let t = pricePer*q; if(q>=2) t*= (1 - DISCOUNT_FOR_2PLUS/100); return t; }
+function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
+function renderQR(payload){ qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload); spaydEl.textContent=payload; qrEmpty.style.display='none'; qrBox.style.display='block'; }
+
+function renderTerms(data){
+  termsBox.innerHTML=''; if(!data.length){ noTerms.style.display='block'; return; } noTerms.style.display='none';
+  data.forEach((ev,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.className='term'+(i===0?' active':'');
+    b.dataset.id=ev.id; b.dataset.price=ev.price; b.dataset.left=ev.left;
+    b.innerHTML=`<h3>${cz(ev.start)}</h3><div class="meta">${ev.name}</div><div class="meta">Zbývá ${ev.left} míst</div>`;
+    b.onclick=()=>{ [...termsBox.children].forEach(c=>c.classList.remove('active')); b.classList.add('active'); selected=ev; updatePriceLeft(); };
+    termsBox.appendChild(b); if(i===0) selected=ev;
+  }); updatePriceLeft();
+}
+
+function updatePriceLeft(){
+  if(!selected){ priceEl.textContent='Cena: –'; leftTag.textContent='Zbývá: −'; return; }
+  const q=Math.max(1,parseInt(qtyInput.value||'1',10)); const left=Number(selected.left); const total=compute(Number(selected.price),q);
+  leftTag.textContent=`Zbývá: ${left} míst`;
+  priceEl.textContent = q>=2 ? `Cena: ${fmt(total)} Kč (sleva −${DISCOUNT_FOR_2PLUS}% pro ${q} místa)` : `Cena: ${fmt(total)} Kč`;
+  discHint.textContent = q<2 ? `Tip: při 2 a více místech se automaticky uplatní sleva ${DISCOUNT_FOR_2PLUS}%` : '';
+}
+
+async function loadEvents(){
+  try{ const r=await fetch(API_URL+'?action=events'); const data=await r.json(); EVENTS=data; renderTerms(data); }
+  catch{ termsBox.innerHTML='<div class="empty">Nepodařilo se načíst termíny. Zkuste to prosím později.</div>'; }
+}
+
+function validate(){
+  errBox.textContent=''; if(!selected){ errBox.textContent='Vyberte prosím termín.'; return false; }
+  const q=Math.max(1,parseInt(qtyInput.value||'1',10)); if(q>selected.left){ errBox.textContent=`Na vybraném termínu zbývá pouze ${selected.left} míst.`; return false; }
+  const email=(emailEl.value||'').trim(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ errBox.textContent='Zadejte platný e-mail.'; return false; }
+  if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
+  return true;
+}
+el('minus').onclick = ()=>{ qtyInput.stepDown(); updatePriceLeft(); };
+el('plus').onclick  = ()=>{ qtyInput.stepUp(); updatePriceLeft(); };
+qtyInput.addEventListener('input', updatePriceLeft);
+
+document.getElementById('reserveBtn').addEventListener('click', async ()=>{
+  if(!validate()) return;
+  btn.disabled=true; errBox.textContent=''; toast.style.display='none';
+
+  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
+  try{
+    const resp = await fetch(API_URL, {
+      method:'POST',
+      headers:{ 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        eventId: selected.id,
+        qty: q,
+        name: (nameEl.value||'').trim(),
+        email: (emailEl.value||'').trim(),
+        consent: true,
+        consentAt: new Date().toISOString(),
+        policyVersion: POLICY_VERSION,
+        marketing: !!marketingEl.checked,
+        ua: navigator.userAgent
+      })
+    }).then(x=>x.json());
+
+    if(!resp.ok){ errBox.textContent = (resp.error || 'Rezervace se nepodařila.'); btn.disabled=false; return; }
+
+    const when = cz(resp.event.start), vs = makeVS();
+    const msg  = `${MSG_BASE} • ${when} • ${q} míst • ${(nameEl.value||'')}`;
+    const payload = spayd(IBAN, resp.total, msg, vs);
+    renderQR(payload);
+
+    toast.style.display='block';
+    await loadEvents(); const again = EVENTS.find(e=>e.id===resp.event.id); if(again){ selected=again; updatePriceLeft(); }
+  }catch(e){ errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.'; }
+  finally{ btn.disabled=false; }
+});
+
+loadEvents();
+</script>
+</body>
+</html>

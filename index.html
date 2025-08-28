@@ -6,78 +6,54 @@
   <title>Rezervace Smyslokoutek – výběr termínu & QR platba</title>
   <meta name="theme-color" content="#ffffff" />
   <meta name="color-scheme" content="light only" />
-
   <style>
     :root{
       --ink:#0b0b0b; --muted:#6b7280; --ok:#16a34a; --bad:#dc2626; --brand:#0ea5e9;
       --card:#fff; --bg:#f6f7fb; --soft:#eef2ff; --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.08)
     }
-
-    /* === Globální box model + iOS reset (fix přetékání inputů) === */
-    html { box-sizing: border-box; }
-    *, *::before, *::after { box-sizing: inherit; }
-
-    input[type="text"], input[type="email"]{
-      width:100%; max-width:100%; display:block;
-      -webkit-appearance:none; appearance:none; /* iOS/Safari */
-    }
-
-    html,body{ margin:0; background:var(--bg); color:var(--ink);
-      font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif }
-
-    .wrap{ max-width:980px; margin:0 auto; padding:20px }
-    .hero{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin-bottom:16px }
-    .hero h1{ margin:0 0 6px; font-size:22px }
-    .hero p{ margin:0; color:var(--muted) }
-
-    .grid{ display:grid; grid-template-columns:2fr 1fr; gap:16px }
-    @media (max-width:900px){ .grid{ grid-template-columns:1fr } }
-
-    .panel{ background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; overflow:hidden } /* overflow: hidden = pojistka */
-
-    .term-list{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-    @media (max-width:700px){ .term-list{ grid-template-columns:1fr } }
-
-    .term{ border:1px solid #e5e7eb; border-radius:14px; padding:14px; cursor:pointer; background:#fff; transition:.15s }
-    .term:hover{ border-color:#c7d2fe; background:var(--soft) }
-    .term.active{ outline:2px solid var(--brand); border-color:transparent; background:var(--soft) }
-    .term h3{ margin:0 0 8px; font-size:16px }
-    .term .meta{ font-size:13px; color:var(--muted) }
-
-    .controls{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:12px 0 }
-    .stepper{ display:flex; align-items:center; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden }
-    .stepper button{ border:0; background:#f3f4f6; width:40px; height:40px; font-size:20px; cursor:pointer }
-    .stepper input{ width:70px; height:40px; border:0; text-align:center; font-size:16px }
-
-    label{ font-weight:600 }
-    input[type="text"],input[type="email"]{ padding:12px; border:1px solid #e5e7eb; border-radius:10px; font-size:16px }
-
-    .check{ display:flex; gap:10px; align-items:flex-start; margin-top:10px; font-size:14px }
-    .check input{ margin-top:2px }
-
-    .price{ font-weight:700 }
-    .hint{ color:var(--muted); font-size:13px }
-
-    .btn{ appearance:none; border:0; border-radius:12px; background:#111; color:#fff; padding:12px 16px; font-weight:700; cursor:pointer }
-    .btn[disabled]{ opacity:.6; cursor:not-allowed }
-
-    .note{ font-size:13px; color:var(--muted) }
-    .qrbox{ display:none; margin-top:10px }
-    .qrwrap{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap }
-    .qrwrap img{ width:240px; height:240px; box-shadow:var(--shadow); border-radius:12px; background:#fff }
-
-    code{ background:#f3f4f6; padding:8px; border-radius:8px; display:block; word-break:break-all }
-    .tag{ display:inline-block; background:#dcfce7; color:#166534; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:700 }
-    .error{ color:var(--bad); font-weight:600 }
-    .toast{ display:none; margin-top:8px; border-left:4px solid var(--ok); background:#ecfdf5; padding:10px; border-radius:8px }
-    .empty{ border:1px dashed #d1d5db; border-radius:12px; padding:16px; text-align:center; color:var(--muted) }
+    /* Fix přetékání inputů / iOS reset */
+    html{box-sizing:border-box}*,*::before,*::after{box-sizing:inherit}
+    input[type="text"],input[type="email"],input[type="tel"]{width:100%;max-width:100%;display:block;-webkit-appearance:none;appearance:none}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
+    .wrap{max-width:980px;margin:0 auto;padding:20px}
+    .hero{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+    .hero h1{margin:0 0 6px;font-size:22px}.hero p{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;overflow:hidden}
+    .term-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:700px){.term-list{grid-template-columns:1fr}}
+    .term{border:1px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;background:#fff;transition:.15s}
+    .term:hover{border-color:#c7d2fe;background:var(--soft)}.term.active{outline:2px solid var(--brand);border-color:transparent;background:var(--soft)}
+    .term h3{margin:0 0 8px;font-size:16px}.term .meta{font-size:13px;color:var(--muted)}
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0}
+    .stepper{display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+    .stepper button{border:0;background:#f3f4f6;width:40px;height:40px;font-size:20px;cursor:pointer}
+    .stepper input{width:70px;height:40px;border:0;text-align:center;font-size:16px}
+    label{font-weight:600}
+    input[type="text"],input[type="email"],input[type="tel"]{padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
+    .check{display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:14px}
+    .check input{margin-top:2px}
+    .price{font-weight:700}.hint{color:var(--muted);font-size:13px}
+    .btn{appearance:none;border:0;border-radius:12px;background:#111;color:#fff;padding:12px 16px;font-weight:700;cursor:pointer}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .note{font-size:13px;color:var(--muted)}
+    .qrbox{display:none;margin-top:10px}
+    .qrwrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .qrwrap img{width:240px;height:240px;box-shadow:var(--shadow);border-radius:12px;background:#fff}
+    code{background:#f3f4f6;padding:8px;border-radius:8px;display:block;word-break:break-all}
+    .tag{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+    .error{color:#dc2626;font-weight:600}
+    .toast{display:none;margin-top:8px;border-left:4px solid var(--ok);background:#ecfdf5;padding:10px;border-radius:8px}
+    .empty{border:1px dashed #d1d5db;border-radius:12px;padding:16px;text-align:center;color:var(--muted)}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hero">
     <h1>Rezervace smyslohraní</h1>
-    <p>Vyberte termín, počet míst a vyplňte e-mail. Při <strong>2 a více místech</strong> se automaticky uplatní sleva.</p>
+    <p>Vyberte termín, počet míst a vyplňte kontakty. <strong>Sleva pro sourozence 5&nbsp;%</strong> se uplatní při <strong>2 a více místech</strong> (zaškrtněte „sourozenci“).</p>
+    <p class="hint" style="margin-top:6px;">Rezervace je platná i bez okamžité platby – můžete uhradit později převodem nebo hotově na místě.</p>
   </div>
 
   <div class="grid">
@@ -98,9 +74,19 @@
         <div><span class="tag" id="leftTag">Zbývá: −</span></div>
       </div>
 
+      <!-- Sourozenci: ukáže se POUZE když qty ≥ 2 -->
+      <div id="siblingsWrap" class="check" style="display:none;">
+        <input id="siblings2" type="checkbox" />
+        <label for="siblings2">Jde o <strong>sourozence</strong> (sleva 5&nbsp;% se uplatní).</label>
+      </div>
+
       <div style="margin-top:10px">
         <label>Jméno dítěte (nebo dětí)</label>
         <input id="name" type="text" placeholder="např. Anna a Tomáš" />
+      </div>
+      <div style="margin-top:10px">
+        <label>Telefon (povinné)</label>
+        <input id="phone" type="tel" placeholder="např. 777 123 456" />
       </div>
       <div style="margin-top:10px">
         <label>E-mail pro potvrzení</label>
@@ -108,7 +94,16 @@
         <div class="hint">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
       </div>
 
-      <!-- GDPR souhlasy -->
+      <!-- Způsob platby -->
+      <div class="check" style="margin-top:12px;">
+        <label style="font-weight:600;margin-right:12px;">Způsob platby</label>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <label><input type="radio" name="pay" value="transfer" checked> Převodem (QR)</label>
+          <label><input type="radio" name="pay" value="cash"> Hotově na místě</label>
+        </div>
+      </div>
+
+      <!-- GDPR -->
       <div class="check">
         <input id="gdpr" type="checkbox" />
         <label for="gdpr">
@@ -123,15 +118,15 @@
       </div>
 
       <div style="margin-top:14px">
-        <button id="reserveBtn" class="btn">Rezervovat a zobrazit QR</button>
-        <div id="toast" class="toast">Rezervace uložena. Níže se zobrazil QR kód k platbě.</div>
+        <button id="reserveBtn" class="btn">Rezervovat a zobrazit</button>
+        <div id="toast" class="toast">Rezervace uložena. Platí i bez okamžité platby – níže najdete informace k platbě.</div>
         <div id="error" class="error"></div>
       </div>
     </div>
 
     <div class="panel">
-      <h2 style="margin:0 0 10px;">2) Zaplaťte QR platbou</h2>
-      <div class="hint">Naskenujte QR kód ve své bankovní aplikaci. Variabilní symbol a zpráva jsou vyplněny automaticky.</div>
+      <h2 style="margin:0 0 10px;">2) Informace k platbě</h2>
+      <div class="hint">Převodem → zobrazí se QR kód. Hotově → jen informace „platba na místě“. Rezervace je potvrzena.</div>
       <div id="qrbox" class="qrbox">
         <div class="qrwrap">
           <img id="qr" alt="QR platba" />
@@ -142,28 +137,30 @@
           </div>
         </div>
       </div>
-      <div id="qrEmpty" class="empty">QR kód se zobrazí po potvrzení rezervace.</div>
+      <div id="qrEmpty" class="empty">QR kód se zobrazí po potvrzení rezervace, pokud zvolíte platbu převodem.</div>
+      <div id="cashInfo" class="empty" style="display:none;">Platba <strong>hotově na místě</strong>. Rezervace je potvrzena – u pokladny nahlaste jméno a termín.</div>
     </div>
   </div>
 </div>
 
 <script>
 /* ===== KONFIGURACE – UPRAVTE ===== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAJh9wVawvTfLUfsi7qqtkxyaT5Hpm69gyAlwNROW8N5S-MEIrOSW541caGaRQ5ysl_g/exec'; // tvoje /exec URL
+const API_URL = 'SEM_VLOŽ_SVOJI_EXEC_URL'; // ← tvoje /exec URL
 const IBAN    = 'TVŮJ_IBAN_BEZ_MEZER';     // např. CZ5855000000001265098001
 const CURRENCY = 'CZK';
-const DISCOUNT_FOR_2PLUS = 20;
 const MSG_BASE = 'SMYSLOHRANI';            // bez diakritiky kvůli bankám
 const VS_PREFIX = '2509';
 const POLICY_VERSION = '2025-08-28';
+const SIBLING_DISCOUNT = 0.05;             // 5 % sleva pro sourozence (2+), jen je-li checkbox
 /* ================================= */
 
 const el = id => document.getElementById(id);
 const termsBox = el('terms'), noTerms = el('noTerms');
 const qtyInput = el('qty'), leftTag = el('leftTag'), priceEl = el('price'), discHint = el('discountHint');
 const btn = el('reserveBtn'), toast = el('toast'), errBox = el('error');
-const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty');
-const nameEl = el('name'), emailEl = el('email'), gdprEl = el('gdpr');
+const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty'), cashInfo = el('cashInfo');
+const nameEl = el('name'), emailEl = el('email'), phoneEl = el('phone'), gdprEl = el('gdpr');
+const siblingsWrap = el('siblingsWrap'); const siblingsEl = document.getElementById('siblings2');
 
 let EVENTS = [], selected = null;
 
@@ -171,26 +168,18 @@ let EVENTS = [], selected = null;
 const fmt = n => (Math.round(n*100)/100).toFixed(2);
 const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
 function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
-function compute(pricePer, q){ let t = pricePer*q; if(q>=2) t*= (1 - DISCOUNT_FOR_2PLUS/100); return t; }
 function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
 function renderQR(payload){ qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload); spaydEl.textContent=payload; qrEmpty.style.display='none'; qrBox.style.display='block'; }
+function sanitizeMsg(s){ let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); t=t.replace(/[^A-Za-z0-9 .,_-]/g,' '); t=t.replace(/\s+/g,' ').trim().toUpperCase(); return t.slice(0,60); }
+function formatForMsg(iso){ const d=new Date(iso); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd} ${hh}:${mi}`; }
 
-// Odstranění diakritiky + povolené znaky pro banky
-function sanitizeMsg(s) {
-  let t = (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  t = t.replace(/[^A-Za-z0-9 .,_-]/g, ' ');
-  t = t.replace(/\s+/g, ' ').trim().toUpperCase();
-  return t.slice(0, 60);
-}
-// Datum do zprávy (bez teček / bulletů)
-function formatForMsg(iso) {
-  const d = new Date(iso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  const hh = String(d.getHours()).padStart(2,'0');
-  const mi = String(d.getMinutes()).padStart(2,'0');
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+function getPaymentMethod(){ const r=document.querySelector('input[name="pay"]:checked'); return r?r.value:'transfer'; }
+
+// PŘEDBĚŽNÝ výpočet na klientu (pro zobrazení před odesláním) – jednotková cena z listu
+function previewTotal(unitPrice, qty, siblingsChecked){
+  const base = unitPrice * qty;
+  if(qty >= 2 && siblingsChecked) return base * (1 - SIBLING_DISCOUNT);
+  return base;
 }
 
 function renderTerms(data){
@@ -205,11 +194,28 @@ function renderTerms(data){
 }
 
 function updatePriceLeft(){
-  if(!selected){ priceEl.textContent='Cena: –'; leftTag.textContent='Zbývá: −'; return; }
-  const q=Math.max(1,parseInt(qtyInput.value||'1',10)); const left=Number(selected.left); const total=compute(Number(selected.price),q);
+  if(!selected){ priceEl.textContent='Cena: –'; leftTag.textContent='Zbývá: −'; discHint.textContent=''; siblingsWrap.style.display='none'; return; }
+  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
+  const left = Number(selected.left);
+  const unit = Number(selected.price || 0);
+
+  siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
+  const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
+
+  const base = unit * q;
+  const total = previewTotal(unit, q, siblingsChecked);
+
   leftTag.textContent=`Zbývá: ${left} míst`;
-  priceEl.textContent = q>=2 ? `Cena: ${fmt(total)} Kč (sleva −${DISCOUNT_FOR_2PLUS}% pro ${q} místa)` : `Cena: ${fmt(total)} Kč`;
-  discHint.textContent = q<2 ? `Tip: při 2 a více místech se automaticky uplatní sleva ${DISCOUNT_FOR_2PLUS}%` : '';
+  priceEl.textContent = `Cena: ${fmt(total)} Kč`;
+
+  if(q >= 2){
+    const discount = siblingsChecked ? fmt(base * SIBLING_DISCOUNT) : '0.00';
+    discHint.textContent = siblingsChecked
+      ? `Sourozenci: sleva 5 % z ceníkové ceny (${fmt(base)} Kč) = −${discount} Kč.`
+      : `Máte 2+ míst. Zaškrtněte „sourozenci“, pokud jde o sourozence – uplatní se sleva 5 %.`;
+  }else{
+    discHint.textContent = '';
+  }
 }
 
 async function loadEvents(){
@@ -218,21 +224,32 @@ async function loadEvents(){
 }
 
 function validate(){
-  errBox.textContent=''; if(!selected){ errBox.textContent='Vyberte prosím termín.'; return false; }
-  const q=Math.max(1,parseInt(qtyInput.value||'1',10)); if(q>selected.left){ errBox.textContent=`Na vybraném termínu zbývá pouze ${selected.left} míst.`; return false; }
-  const email=(emailEl.value||'').trim(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ errBox.textContent='Zadejte platný e-mail.'; return false; }
+  errBox.textContent='';
+  if(!selected){ errBox.textContent='Vyberte prosím termín.'; return false; }
+  const q=Math.max(1,parseInt(qtyInput.value||'1',10));
+  if(q>selected.left){ errBox.textContent=`Na vybraném termínu zbývá pouze ${selected.left} míst.`; return false; }
+  const email=(emailEl.value||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ errBox.textContent='Zadejte platný e-mail.'; return false; }
+  const phone=(phoneEl.value||'').trim();
+  if(phone.length < 6){ errBox.textContent='Zadejte telefon (povinné pole).'; return false; }
   if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
   return true;
 }
-el('minus').onclick = ()=>{ qtyInput.stepDown(); updatePriceLeft(); };
-el('plus').onclick  = ()=>{ qtyInput.stepUp(); updatePriceLeft(); };
-qtyInput.addEventListener('input', updatePriceLeft);
 
-document.getElementById('reserveBtn').addEventListener('click', async ()=>{
+document.getElementById('minus').onclick = ()=>{ qtyInput.stepDown(); updatePriceLeft(); };
+document.getElementById('plus').onclick  = ()=>{ qtyInput.stepUp(); updatePriceLeft(); };
+qtyInput.addEventListener('input', updatePriceLeft);
+siblingsEl.addEventListener('change', updatePriceLeft);
+document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', ()=>{}));
+
+btn.addEventListener('click', async ()=>{
   if(!validate()) return;
   btn.disabled=true; errBox.textContent=''; toast.style.display='none';
 
-  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
+  const q   = Math.max(1, parseInt(qtyInput.value||'1',10));
+  const pay = getPaymentMethod();
+  const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
+
   try{
     const resp = await fetch(API_URL, {
       method:'POST',
@@ -242,6 +259,9 @@ document.getElementById('reserveBtn').addEventListener('click', async ()=>{
         qty: q,
         name: (nameEl.value||'').trim(),
         email: (emailEl.value||'').trim(),
+        phone: (phoneEl.value||'').trim(),
+        paymentMethod: pay,     // 'transfer' | 'cash'
+        siblings2: siblingsChecked,
         consent: true,
         consentAt: new Date().toISOString(),
         policyVersion: POLICY_VERSION,
@@ -251,19 +271,44 @@ document.getElementById('reserveBtn').addEventListener('click', async ()=>{
 
     if(!resp.ok){ errBox.textContent = (resp.error || 'Rezervace se nepodařila.'); btn.disabled=false; return; }
 
-    // --- Bezpečná zpráva pro banku (bez diakritiky a nepovolených znaků) ---
-    const whenPlain = formatForMsg(resp.event.start);
-    const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${(nameEl.value||'')}`;
-    const msg       = sanitizeMsg(rawMsg);
-
-    const vs   = makeVS();
-    const payload = spayd(IBAN, resp.total, msg, vs);
-    renderQR(payload);
-
+    // Po uložení: vždy zobraz informaci + přepni krok 2 dle platby
     toast.style.display='block';
-    await loadEvents(); const again = EVENTS.find(e=>e.id===resp.event.id); if(again){ selected=again; updatePriceLeft(); }
-  }catch(e){ errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.'; }
-  finally{ btn.disabled=false; }
+    qrBox.style.display='none'; spaydEl.textContent=''; qrEmpty.style.display='none'; cashInfo.style.display='none';
+
+    // Finální částka = pouze server (resp.total)
+    const totalServer = Number(resp.total || 0);
+
+    if (pay === 'transfer') {
+      // Bezpečná zpráva pro banku
+      const whenPlain = formatForMsg(resp.event.start);
+      const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${(nameEl.value||'')}`;
+      const msg       = sanitizeMsg(rawMsg);
+      const vs   = makeVS();
+      const payload = spayd(IBAN, totalServer, msg, vs);
+      renderQR(payload);
+      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč`;
+      discHint.textContent = (q >= 2 && siblingsChecked)
+        ? `Sourozenci: sleva 5 % uplatněna.`
+        : (q >= 2 ? `Máte 2+ míst. Sleva se uplatní jen u sourozenců.` : ``);
+    } else {
+      // Hotově na místě – bez QR
+      cashInfo.style.display='block';
+      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč (platba na místě)`;
+      discHint.textContent = (q >= 2 && siblingsChecked)
+        ? `Sourozenci: sleva 5 % uplatněna.`
+        : (q >= 2 ? `Máte 2+ míst. Sleva se uplatní jen u sourozenců.` : ``);
+    }
+
+    // Refresh kapacit
+    await loadEvents();
+    const again = EVENTS.find(e=>e.id===resp.event.id);
+    if(again){ selected=again; updatePriceLeft(); }
+
+  }catch(e){
+    errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.';
+  }finally{
+    btn.disabled=false;
+  }
 });
 
 loadEvents();

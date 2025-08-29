@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rezervace Smyslokoutek – výběr termínu & QR platba</title>
+  <title>Rezervace Smyslokoutek – výběr termínu & platba</title>
   <meta name="theme-color" content="#ffffff" />
   <meta name="color-scheme" content="light only" />
   <style>
@@ -74,7 +74,7 @@
         <div><span class="tag" id="leftTag">Zbývá: −</span></div>
       </div>
 
-      <!-- Sourozenci: ukáže se POUZE když qty ≥ 2 -->
+      <!-- Sourozenci -->
       <div id="siblingsWrap" class="check" style="display:none;">
         <input id="siblings2" type="checkbox" />
         <label for="siblings2">Jde o <strong>sourozence</strong> (sleva 5&nbsp;% se uplatní).</label>
@@ -98,8 +98,8 @@
       <div class="check" style="margin-top:12px;">
         <label style="font-weight:600;margin-right:12px;">Způsob platby</label>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <label><input type="radio" name="pay" value="transfer" checked> Převodem (QR)</label>
-          <label><input type="radio" name="pay" value="cash"> Hotově na místě</label>
+          <label><input type="radio" name="pay" value="cash" checked> Hotově na místě</label>
+          <label><input type="radio" name="pay" value="transfer"> Převodem (QR)</label>
         </div>
       </div>
 
@@ -126,7 +126,8 @@
 
     <div class="panel">
       <h2 style="margin:0 0 10px;">2) Informace k platbě</h2>
-      <div class="hint">Převodem → zobrazí se QR kód. Hotově → jen informace „platba na místě“. Rezervace je potvrzena.</div>
+      <div class="hint">Hotově → informace „platba na místě“. Převodem → zobrazí se QR kód. Rezervace je potvrzena.</div>
+
       <div id="qrbox" class="qrbox">
         <div class="qrwrap">
           <img id="qr" alt="QR platba" />
@@ -137,6 +138,7 @@
           </div>
         </div>
       </div>
+
       <div id="qrEmpty" class="empty">QR kód se zobrazí po potvrzení rezervace, pokud zvolíte platbu převodem.</div>
       <div id="cashInfo" class="empty" style="display:none;">Platba <strong>hotově na místě</strong>. Rezervace je potvrzena – u pokladny nahlaste jméno a termín.</div>
     </div>
@@ -144,15 +146,15 @@
 </div>
 
 <script>
-/* ===== KONFIGURACE – UPRAVTE ===== */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAJh9wVawvTfLUfsi7qqtkxyaT5Hpm69gyAlwNROW8N5S-MEIrOSW541caGaRQ5ysl_g/exec'; // ← tvoje /exec URL
-const IBAN    = 'TVŮJ_IBAN_BEZ_MEZER';     // např. CZ5855000000001265098001
+/* ===== KONFIGURACE ===== */
+const API_URL = '...'; // doplň
+const IBAN = 'TVŮJ_IBAN_BEZ_MEZER';
 const CURRENCY = 'CZK';
-const MSG_BASE = 'SMYSLOHRANI';            // bez diakritiky kvůli bankám
+const MSG_BASE = 'SMYSLOHRANI';
 const VS_PREFIX = '2509';
 const POLICY_VERSION = '2025-08-28';
-const SIBLING_DISCOUNT = 0.05;             // 5 % sleva pro sourozence (2+), jen je-li checkbox
-/* ================================= */
+const SIBLING_DISCOUNT = 0.05; // sleva pro 2+ místa
+/* ======================== */
 
 const el = id => document.getElementById(id);
 const termsBox = el('terms'), noTerms = el('noTerms');

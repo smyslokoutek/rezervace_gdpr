@@ -186,13 +186,35 @@ function renderTerms(data){
   termsBox.innerHTML='';
   if(!data.length){ noTerms.style.display='block'; return; }
   noTerms.style.display='none';
+
   data.forEach((ev,i)=>{
-    const b=document.createElement('button'); b.type='button'; b.className='term'+(i===0?' active':'');
-    b.dataset.id=ev.id; b.dataset.price=ev.price; b.dataset.left=ev.left; b.dataset.sibling=ev.sibling_discount || 0;
-    b.innerHTML=`<h3>${cz(ev.start)}</h3><div class="meta">${ev.name}</div><div class="meta">Zbývá ${ev.left} míst</div>`;
-    b.onclick=()=>{ [...termsBox.children].forEach(c=>c.classList.remove('active')); b.classList.add('active'); selected=ev; updatePriceLeft(); };
-    termsBox.appendChild(b); if(i===0) selected=ev;
+    const duration = Number(ev.duration || 90);
+    const b = document.createElement('button');
+    b.type='button';
+    b.className='term'+(i===0?' active':'');
+    b.dataset.id=ev.id;
+    b.dataset.price=ev.price;
+    b.dataset.left=ev.left;
+    b.dataset.sibling=ev.sibling_discount || 0;
+    b.dataset.duration=duration;
+
+    b.innerHTML=`
+      <h3>${cz(ev.start)}</h3>
+      <div class="meta">${ev.name}</div>
+      <div class="meta">Délka: ${duration} min</div>
+      <div class="meta">Zbývá ${ev.left} míst</div>`;
+
+    b.onclick=()=>{
+      [...termsBox.children].forEach(c=>c.classList.remove('active'));
+      b.classList.add('active');
+      selected = { ...ev, duration };
+      updatePriceLeft();
+    };
+
+    termsBox.appendChild(b);
+    if(i===0) selected = { ...ev, duration };
   });
+
   updatePriceLeft();
 }
 
@@ -204,15 +226,15 @@ function updatePriceLeft(){
   const left = Number(selected.left);
   const unit = Number(selected.price || 0);
   const siblingFix = Number(selected.sibling_discount || 0);
+  const durationMin = Number(selected.duration || 90);
 
   siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
   const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
 
-  const base = unit * q;
   const total = previewTotal(unit, q, siblingsChecked, siblingFix);
 
   leftTag.textContent=`Zbývá: ${left} míst`;
-  priceEl.textContent = `Cena: ${fmt(total)} Kč`;
+  priceEl.textContent = `Cena: ${fmt(total)} Kč  •  Délka lekce: ${durationMin} min`;
 
   if(q >= 2){
     const disc = siblingsChecked ? (siblingFix * q) : 0;
@@ -270,6 +292,7 @@ btn.addEventListener('click', async ()=>{
       headers:{ 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         eventId: selected.id,
+        eventDuration: Number(selected?.duration || 90), // NOVÉ: posíláme délku i z FE (pro historii)
         qty: q,
         name: (nameEl.value||'').trim(),
         email: (emailEl.value||'').trim(),
@@ -293,23 +316,24 @@ btn.addEventListener('click', async ()=>{
 
     if (pay === 'transfer') {
       const whenPlain = formatForMsg(resp.event.start);
-      const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${(nameEl.value||'')}`;
+      const dur = Number(resp?.event?.duration || selected?.duration || 90);
+      const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${dur}MIN ${(nameEl.value||'')}`;
       const msg       = sanitizeMsg(rawMsg);
-      const vs   = makeVS();
-      const payload = spayd(IBAN, totalServer, msg, vs);
+      const vs        = makeVS();
+      const payload   = spayd(IBAN, totalServer, msg, vs);
       renderQR(payload);
-      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč`;
+      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč  •  Délka lekce: ${dur} min`;
       discHint.textContent = '';
     } else {
       cashInfo.style.display='block';
-      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč (platba na místě)`;
+      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč (platba na místě)  •  Délka lekce: ${Number(resp?.event?.duration || selected?.duration || 90)} min`;
       discHint.textContent = '';
     }
 
     // Refresh kapacit
     await loadEvents();
     const again = EVENTS.find(e=>e.id===resp.event.id);
-    if(again){ selected=again; updatePriceLeft(); }
+    if(again){ selected={...again, duration:Number(again.duration||90)}; updatePriceLeft(); }
 
   }catch(e){
     errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.';

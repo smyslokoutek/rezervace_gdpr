@@ -111,6 +111,15 @@
         </label>
       </div>
 
+      <!-- Alergeny – povinné potvrzení -->
+      <div class="check">
+        <input id="allergenAck" type="checkbox" />
+        <label for="allergenAck">
+          Beru na vědomí, že lekce smyslohraní mohou obsahovat běžné alergeny (např. mouka/lepek, mléko, vejce, ořechy, sója, citrusy, potravinářská barviva, latex).
+          Pokud má dítě alergii, zavazuji se informovat pořadatele <strong>před lekcí</strong>.
+        </label>
+      </div>
+
       <div style="margin-top:12px">
         <div id="price" class="price">Cena: –</div>
         <div id="discountHint" class="hint"></div>
@@ -161,6 +170,7 @@ const btn = el('reserveBtn'), toast = el('toast'), errBox = el('error');
 const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty'), cashInfo = el('cashInfo');
 const nameEl = el('name'), emailEl = el('email'), phoneEl = el('phone'), gdprEl = el('gdpr');
 const siblingsWrap = el('siblingsWrap'); const siblingsEl = document.getElementById('siblings2');
+const allergenAckEl = document.getElementById('allergenAck'); // NOVÉ
 
 let EVENTS = [], selected = null;
 
@@ -269,6 +279,7 @@ function validate(){
   const phone=(phoneEl.value||'').trim();
   if(phone.length < 6){ errBox.textContent='Zadejte telefon (povinné pole).'; return false; }
   if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
+  if(!allergenAckEl.checked){ errBox.textContent='Pro odeslání je nutné potvrdit informaci o možných alergenech.'; return false; } // NOVÉ
   return true;
 }
 
@@ -292,7 +303,7 @@ btn.addEventListener('click', async ()=>{
       headers:{ 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         eventId: selected.id,
-        eventDuration: Number(selected?.duration || 90), // NOVÉ: posíláme délku i z FE (pro historii)
+        eventDuration: Number(selected?.duration || 90),
         qty: q,
         name: (nameEl.value||'').trim(),
         email: (emailEl.value||'').trim(),
@@ -302,7 +313,8 @@ btn.addEventListener('click', async ()=>{
         consent: true,
         consentAt: new Date().toISOString(),
         policyVersion: POLICY_VERSION,
-        ua: navigator.userAgent
+        ua: navigator.userAgent,
+        allergen_notice_ack: !!allergenAckEl.checked // NOVÉ
       })
     }).then(x=>x.json());
 

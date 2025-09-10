@@ -93,6 +93,17 @@
         <div class="hint">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
       </div>
 
+      <!-- KUPON: pole + tlačítka -->
+      <div style="margin-top:10px">
+        <label>Slevový kód</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="coupon" type="text" placeholder="např. ABC20" style="flex:1 1 220px" />
+          <button id="applyCouponBtn" type="button" class="btn" style="padding:10px 14px">Uplatnit</button>
+          <button id="removeCouponBtn" type="button" class="btn" style="padding:10px 14px; display:none; background:#6b7280">Zrušit kupon</button>
+        </div>
+        <div id="couponMsg" class="hint"></div>
+      </div>
+
       <!-- Způsob platby -->
       <div class="check" style="margin-top:12px;">
         <label style="font-weight:600;margin-right:12px;">Způsob platby</label>
@@ -170,12 +181,20 @@ const btn = el('reserveBtn'), toast = el('toast'), errBox = el('error');
 const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el('qrEmpty'), cashInfo = el('cashInfo');
 const nameEl = el('name'), emailEl = el('email'), phoneEl = el('phone'), gdprEl = el('gdpr');
 const siblingsWrap = el('siblingsWrap'); const siblingsEl = document.getElementById('siblings2');
-const allergenAckEl = document.getElementById('allergenAck'); // NOVÉ
+const allergenAckEl = document.getElementById('allergenAck');
+
+// KUPON: selektory + stav
+const couponEl = document.getElementById('coupon');
+const couponMsg = document.getElementById('couponMsg');
+const applyCouponBtn = document.getElementById('applyCouponBtn');
+const removeCouponBtn = document.getElementById('removeCouponBtn');
+let APPLIED_COUPON = null;
 
 let EVENTS = [], selected = null;
 
 // ===== Helpery =====
-const fmt = n => (Math.round(n*100)/100).toFixed(2);
+const fmt = n => (Math.round(n*100)/100).toFixed(2); // pro SPAYD
+const kc  = n => String(Math.ceil(Math.max(0, Number(n||0)))); // zobrazení v Kč bez desetinných dle pravidla „nahoru“
 const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
 function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
 function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
@@ -184,14 +203,75 @@ function sanitizeMsg(s){ let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]
 function formatForMsg(iso){ const d=new Date(iso); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd} ${hh}:${mi}`; }
 function getPaymentMethod(){ const r=document.querySelector('input[name="pay"]:checked'); return r?r.value:'transfer'; }
 
-// Předvýpočet na klientu – pevná částka za dítě
-function previewTotal(unitPrice, qty, siblingsChecked, siblingFix){
-  const base = unitPrice * qty;
-  const apply = (qty >= 2) && siblingsChecked && (siblingFix > 0);
-  const total = apply ? (base - siblingFix * qty) : base;
-  return Math.max(0, total);
+// ===== Serverový náhled ceny (včetně kuponu) =====
+async function previewWith(code){
+  if (!selected) return null;
+  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
+  const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
+
+  const params = new URLSearchParams({
+    action:'price',
+    eventId: selected.id,
+    qty: String(q),
+    siblings2: String(siblingsChecked),
+    couponCode: (code||'').trim()
+  });
+
+  const r = await fetch(API_URL+'?'+params.toString());
+  return r.json();
 }
 
+function showBreakdown(calc){
+  if (!calc || !calc.ok){ priceEl.textContent='Cena: –'; discHint.textContent=''; return; }
+  const parts = [];
+  parts.push(`Základ: ${kc(calc.base||0)} Kč`);
+  if (calc.siblingsDisc) parts.push(`Sourozenci: −${kc(calc.siblingsDisc)} Kč`);
+  if (calc.couponDisc)   parts.push(`Kupon: −${kc(calc.couponDisc)} Kč`);
+  priceEl.textContent = `Cena: ${kc(calc.total||0)} Kč  •  Délka lekce: ${Number(selected?.duration||90)} min`;
+  discHint.textContent = parts.join(' • ');
+}
+
+async function refreshPricePreview(){
+  if (!selected){ priceEl.textContent='Cena: –'; discHint.textContent=''; return; }
+
+  // základní UI (zbývá, viditelnost sourozenců)
+  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
+  leftTag.textContent = `Zbývá: ${Number(selected.left)} míst`;
+  siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
+
+  couponMsg.textContent = '';
+
+  const code = APPLIED_COUPON ? APPLIED_COUPON.code : (couponEl.value||'').trim();
+  try{
+    const res = await previewWith(code);
+    if (!res || !res.ok){
+      // pokud byl aplikovaný kupon a teď neprojde, zruš ho
+      if (APPLIED_COUPON){
+        APPLIED_COUPON = null;
+        removeCouponBtn.style.display='none';
+        applyCouponBtn.style.display='inline-block';
+        couponMsg.textContent = (res && res.error) ? `Kupon zrušen: ${res.error}` : 'Kupon zrušen.';
+        const noCoupon = await previewWith('');
+        if (noCoupon && noCoupon.ok) showBreakdown(noCoupon);
+      } else {
+        const noCoupon = await previewWith('');
+        if (noCoupon && noCoupon.ok) showBreakdown(noCoupon);
+        if (res && res.error) couponMsg.textContent = res.error;
+      }
+      return;
+    }
+    showBreakdown(res);
+    if (APPLIED_COUPON){
+      couponMsg.textContent = `Kupon „${APPLIED_COUPON.code}“ je uplatněn.`;
+    } else if (code) {
+      couponMsg.textContent = 'Kupon je platný – klikněte na „Uplatnit“.';
+    }
+  } catch(e){
+    // ticho – jen UI
+  }
+}
+
+// ===== Načtení a render termínů =====
 function renderTerms(data){
   termsBox.innerHTML='';
   if(!data.length){ noTerms.style.display='block'; return; }
@@ -218,44 +298,15 @@ function renderTerms(data){
       [...termsBox.children].forEach(c=>c.classList.remove('active'));
       b.classList.add('active');
       selected = { ...ev, duration };
-      updatePriceLeft();
+      // změna termínu může zneplatnit kupon
+      refreshPricePreview();
     };
 
     termsBox.appendChild(b);
     if(i===0) selected = { ...ev, duration };
   });
 
-  updatePriceLeft();
-}
-
-function updatePriceLeft(){
-  if(!selected){
-    priceEl.textContent='Cena: –'; leftTag.textContent='Zbývá: −'; discHint.textContent=''; siblingsWrap.style.display='none'; return;
-  }
-  const q = Math.max(1, parseInt(qtyInput.value||'1',10));
-  const left = Number(selected.left);
-  const unit = Number(selected.price || 0);
-  const siblingFix = Number(selected.sibling_discount || 0);
-  const durationMin = Number(selected.duration || 90);
-
-  siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
-  const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
-
-  const total = previewTotal(unit, q, siblingsChecked, siblingFix);
-
-  leftTag.textContent=`Zbývá: ${left} míst`;
-  priceEl.textContent = `Cena: ${fmt(total)} Kč  •  Délka lekce: ${durationMin} min`;
-
-  if(q >= 2){
-    const disc = siblingsChecked ? (siblingFix * q) : 0;
-    discHint.textContent = siblingsChecked
-      ? `Sourozenci: sleva ${fmt(siblingFix)} Kč za dítě × ${q} = −${fmt(disc)} Kč.`
-      : (siblingFix > 0
-          ? `Máte 2+ míst. Zaškrtněte „sourozenci“, pokud jde o sourozence – uplatní se sleva ${fmt(siblingFix)} Kč / dítě.`
-          : `Máte 2+ míst.` );
-  } else {
-    discHint.textContent = '';
-  }
+  refreshPricePreview();
 }
 
 async function loadEvents(){
@@ -269,6 +320,7 @@ async function loadEvents(){
   }
 }
 
+// ===== Validace =====
 function validate(){
   errBox.textContent='';
   if(!selected){ errBox.textContent='Vyberte prosím termín.'; return false; }
@@ -279,16 +331,43 @@ function validate(){
   const phone=(phoneEl.value||'').trim();
   if(phone.length < 6){ errBox.textContent='Zadejte telefon (povinné pole).'; return false; }
   if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
-  if(!allergenAckEl.checked){ errBox.textContent='Pro odeslání je nutné potvrdit informaci o možných alergenech.'; return false; } // NOVÉ
+  if(!allergenAckEl.checked){ errBox.textContent='Pro odeslání je nutné potvrdit informaci o možných alergenech.'; return false; }
   return true;
 }
 
-document.getElementById('minus').onclick = ()=>{ qtyInput.stepDown(); updatePriceLeft(); };
-document.getElementById('plus').onclick  = ()=>{ qtyInput.stepUp();  updatePriceLeft(); };
-qtyInput.addEventListener('input', updatePriceLeft);
-siblingsEl.addEventListener('change', updatePriceLeft);
+// ===== Ovládání =====
+document.getElementById('minus').onclick = ()=>{ qtyInput.stepDown(); refreshPricePreview(); };
+document.getElementById('plus').onclick  = ()=>{ qtyInput.stepUp();  refreshPricePreview(); };
+qtyInput.addEventListener('input', refreshPricePreview);
+siblingsEl.addEventListener('change', refreshPricePreview);
 document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', ()=>{}));
 
+// KUPON: uplatnit / zrušit
+applyCouponBtn.addEventListener('click', async ()=>{
+  const code = (couponEl.value||'').trim();
+  if (!code){ couponMsg.textContent='Zadejte kód.'; return; }
+  const res = await previewWith(code);
+  if (!res || !res.ok){
+    couponMsg.textContent = (res && res.error) ? res.error : 'Kupon nelze použít.';
+    return;
+  }
+  APPLIED_COUPON = { code };
+  couponMsg.textContent = `Kupon „${code}“ byl uplatněn.`;
+  applyCouponBtn.style.display='none';
+  removeCouponBtn.style.display='inline-block';
+  showBreakdown(res);
+});
+
+removeCouponBtn.addEventListener('click', async ()=>{
+  APPLIED_COUPON = null;
+  removeCouponBtn.style.display='none';
+  applyCouponBtn.style.display='inline-block';
+  couponMsg.textContent = 'Kupon byl zrušen.';
+  const res = await previewWith('');
+  if (res && res.ok) showBreakdown(res);
+});
+
+// ===== Odeslání =====
 btn.addEventListener('click', async ()=>{
   if(!validate()) return;
   btn.disabled=true; errBox.textContent=''; toast.style.display='none';
@@ -314,7 +393,9 @@ btn.addEventListener('click', async ()=>{
         consentAt: new Date().toISOString(),
         policyVersion: POLICY_VERSION,
         ua: navigator.userAgent,
-        allergen_notice_ack: !!allergenAckEl.checked // NOVÉ
+        allergen_notice_ack: !!allergenAckEl.checked,
+        // KUPON: posíláme pouze uplatněný kód
+        couponCode: APPLIED_COUPON ? APPLIED_COUPON.code : ''
       })
     }).then(x=>x.json());
 
@@ -334,18 +415,18 @@ btn.addEventListener('click', async ()=>{
       const vs        = makeVS();
       const payload   = spayd(IBAN, totalServer, msg, vs);
       renderQR(payload);
-      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč  •  Délka lekce: ${dur} min`;
+      priceEl.textContent = `Cena: ${kc(totalServer)} Kč  •  Délka lekce: ${dur} min`;
       discHint.textContent = '';
     } else {
       cashInfo.style.display='block';
-      priceEl.textContent = `Cena: ${fmt(totalServer)} Kč (platba na místě)  •  Délka lekce: ${Number(resp?.event?.duration || selected?.duration || 90)} min`;
+      priceEl.textContent = `Cena: ${kc(totalServer)} Kč (platba na místě)  •  Délka lekce: ${Number(resp?.event?.duration || selected?.duration || 90)} min`;
       discHint.textContent = '';
     }
 
     // Refresh kapacit
     await loadEvents();
     const again = EVENTS.find(e=>e.id===resp.event.id);
-    if(again){ selected={...again, duration:Number(again.duration||90)}; updatePriceLeft(); }
+    if(again){ selected={...again, duration:Number(again.duration||90)}; refreshPricePreview(); }
 
   }catch(e){
     errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.';

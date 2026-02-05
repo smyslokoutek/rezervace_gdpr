@@ -45,6 +45,8 @@
     .error{color:#dc2626;font-weight:600}
     .toast{display:none;margin-top:8px;border-left:4px solid var(--ok);background:#ecfdf5;padding:10px;border-radius:8px}
     .empty{border:1px dashed #d1d5db;border-radius:12px;padding:16px;text-align:center;color:var(--muted)}
+    /* honeypot */
+    .hp-field{position:absolute !important; left:-99999px !important; top:auto !important; width:1px !important; height:1px !important; overflow:hidden !important;}
   </style>
 </head>
 <body>
@@ -91,6 +93,12 @@
         <label>E-mail pro potvrzení</label>
         <input id="email" type="email" placeholder="např. maminka@..." />
         <div class="hint">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
+      </div>
+
+      <!-- honeypot (bot trap) -->
+      <div class="hp-field" aria-hidden="true">
+        <label for="website">Website</label>
+        <input id="website" type="text" autocomplete="off" tabindex="-1" />
       </div>
 
       <!-- KUPON: pole + tlačítka -->
@@ -172,6 +180,13 @@ const CURRENCY = 'CZK';
 const MSG_BASE = 'SMYSLOHRANI';
 const VS_PREFIX = '2509';
 const POLICY_VERSION = '2025-08-28';
+
+/**
+ * ✅ BEZPEČNOST – zapnout až po tom, co v Apps Script nastavíš STRICT_PUBLIC_AUTH = true
+ * - PUBLIC_SECRET se NESMÍ dávat do FE. Patří na server. Podepisování se dělá jen pokud máš server-side proxy.
+ * - Proto tady necháváme SIGN_REQUESTS = false a používáme: idempotency + honeypot.
+ */
+const SIGN_REQUESTS = false; // nechat false (bez proxy to nejde bezpečně)
 /* ======================== */
 
 const el = id => document.getElementById(id);
@@ -182,6 +197,7 @@ const qrBox = el('qrbox'), qrImg = el('qr'), spaydEl = el('spayd'), qrEmpty = el
 const nameEl = el('name'), emailEl = el('email'), phoneEl = el('phone'), gdprEl = el('gdpr');
 const siblingsWrap = el('siblingsWrap'); const siblingsEl = document.getElementById('siblings2');
 const allergenAckEl = document.getElementById('allergenAck');
+const websiteEl = document.getElementById('website'); // honeypot
 
 // KUPON: selektory + stav
 const couponEl = document.getElementById('coupon');
@@ -203,6 +219,27 @@ function sanitizeMsg(s){ let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]
 function formatForMsg(iso){ const d=new Date(iso); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd} ${hh}:${mi}`; }
 function getPaymentMethod(){ const r=document.querySelector('input[name="pay"]:checked'); return r?r.value:'transfer'; }
 
+function nowIso(){ return new Date().toISOString(); }
+function safeStr(s, max=500){ const t=String(s||''); return t.length>max ? t.slice(0,max) : t; }
+function normalizePhone(p){ return String(p||'').trim().replace(/\s+/g,''); }
+
+// ===== Idempotency key (prevents double submit) =====
+function uuidv4(){
+  // good enough for idempotency (not crypto)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
+    const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+function getIdemKey(){
+  let k = sessionStorage.getItem('idemKey');
+  if (!k){ k = uuidv4()+uuidv4(); sessionStorage.setItem('idemKey', k); }
+  return k;
+}
+function rotateIdemKey(){
+  sessionStorage.removeItem('idemKey');
+}
+
 // ===== Serverový náhled ceny (včetně kuponu) =====
 async function previewWith(code){
   if (!selected) return null;
@@ -217,7 +254,7 @@ async function previewWith(code){
     couponCode: (code||'').trim()
   });
 
-  const r = await fetch(API_URL+'?'+params.toString());
+  const r = await fetch(API_URL+'?'+params.toString(), { method:'GET', cache:'no-store' });
   return r.json();
 }
 
@@ -311,10 +348,10 @@ function renderTerms(data){
 
 async function loadEvents(){
   try{
-    const r=await fetch(API_URL+'?action=events');
+    const r=await fetch(API_URL+'?action=events', { method:'GET', cache:'no-store' });
     const data=await r.json();
-    EVENTS=data;
-    renderTerms(data);
+    EVENTS=data.items ? data.items : data; // toleruje i {ok:true,items:[]}
+    renderTerms(EVENTS);
   } catch {
     termsBox.innerHTML='<div class="empty">Nepodařilo se načíst termíny. Zkuste to prosím později.</div>';
   }
@@ -326,12 +363,22 @@ function validate(){
   if(!selected){ errBox.textContent='Vyberte prosím termín.'; return false; }
   const q=Math.max(1,parseInt(qtyInput.value||'1',10));
   if(q>selected.left){ errBox.textContent=`Na vybraném termínu zbývá pouze ${selected.left} míst.`; return false; }
+
   const email=(emailEl.value||'').trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ errBox.textContent='Zadejte platný e-mail.'; return false; }
-  const phone=(phoneEl.value||'').trim();
+
+  const phone=normalizePhone(phoneEl.value||'');
   if(phone.length < 6){ errBox.textContent='Zadejte telefon (povinné pole).'; return false; }
+
   if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
   if(!allergenAckEl.checked){ errBox.textContent='Pro odeslání je nutné potvrdit informaci o možných alergenech.'; return false; }
+
+  // honeypot
+  if ((websiteEl.value||'').trim()){
+    errBox.textContent='Formulář se nepodařilo odeslat. Zkuste to prosím znovu.';
+    return false;
+  }
+
   return true;
 }
 
@@ -370,36 +417,57 @@ removeCouponBtn.addEventListener('click', async ()=>{
 // ===== Odeslání =====
 btn.addEventListener('click', async ()=>{
   if(!validate()) return;
+
   btn.disabled=true; errBox.textContent=''; toast.style.display='none';
 
   const q   = Math.max(1, parseInt(qtyInput.value||'1',10));
   const pay = getPaymentMethod();
   const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
 
+  // idempotency
+  const idemKey = getIdemKey();
+
+  // payload
+  const payload = {
+    eventId: selected.id,
+    eventDuration: Number(selected?.duration || 90),
+    qty: q,
+    name: safeStr((nameEl.value||'').trim(), 120),
+    email: safeStr((emailEl.value||'').trim(), 180),
+    phone: safeStr(normalizePhone(phoneEl.value||''), 24),
+    paymentMethod: pay,
+    siblings2: siblingsChecked,
+    consent: true,
+    consentAt: nowIso(),
+    policyVersion: POLICY_VERSION,
+    ua: safeStr(navigator.userAgent, 300),
+    allergen_notice_ack: !!allergenAckEl.checked,
+    // honeypot
+    website: safeStr((websiteEl.value||'').trim(), 120),
+    // idempotency (server cache)
+    idempotencyKey: idemKey,
+    // KUPON: posíláme pouze uplatněný kód
+    couponCode: APPLIED_COUPON ? APPLIED_COUPON.code : ''
+  };
+
   try{
-    const resp = await fetch(API_URL, {
+    // podpis requestů: bez server-side proxy to nedává smysl bezpečně, necháváme vypnuto
+    const url = API_URL;
+
+    const resp = await fetch(url, {
       method:'POST',
       headers:{ 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        eventId: selected.id,
-        eventDuration: Number(selected?.duration || 90),
-        qty: q,
-        name: (nameEl.value||'').trim(),
-        email: (emailEl.value||'').trim(),
-        phone: (phoneEl.value||'').trim(),
-        paymentMethod: pay,
-        siblings2: siblingsChecked,
-        consent: true,
-        consentAt: new Date().toISOString(),
-        policyVersion: POLICY_VERSION,
-        ua: navigator.userAgent,
-        allergen_notice_ack: !!allergenAckEl.checked,
-        // KUPON: posíláme pouze uplatněný kód
-        couponCode: APPLIED_COUPON ? APPLIED_COUPON.code : ''
-      })
+      body: JSON.stringify(payload)
     }).then(x=>x.json());
 
-    if(!resp.ok){ errBox.textContent = (resp.error || 'Rezervace se nepodařila.'); btn.disabled=false; return; }
+    if(!resp.ok){
+      errBox.textContent = (resp.error || 'Rezervace se nepodařila.');
+      btn.disabled=false;
+      return;
+    }
+
+    // ✅ success -> otočit idempotency key, aby další rezervace byla nová
+    rotateIdemKey();
 
     // Po uložení
     toast.style.display='block';
@@ -413,8 +481,8 @@ btn.addEventListener('click', async ()=>{
       const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${dur}MIN ${(nameEl.value||'')}`;
       const msg       = sanitizeMsg(rawMsg);
       const vs        = makeVS();
-      const payload   = spayd(IBAN, totalServer, msg, vs);
-      renderQR(payload);
+      const payloadSpayd   = spayd(IBAN, totalServer, msg, vs);
+      renderQR(payloadSpayd);
       priceEl.textContent = `Cena: ${kc(totalServer)} Kč  •  Délka lekce: ${dur} min`;
       discHint.textContent = '';
     } else {

@@ -286,9 +286,7 @@
     .btn:focus-visible{outline:none; box-shadow: var(--focus), 0 12px 26px rgba(0,0,0,.14)}
     .btn[disabled]{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none}
 
-    .btn--muted{
-      background: #6b7280;
-    }
+    .btn--muted{ background: #6b7280; }
     .btn--muted:hover{background:#4b5563}
 
     .hint{color: var(--muted); font-size: 13px; line-height: 1.4}
@@ -474,7 +472,7 @@
         <div style="margin-top:14px">
           <button id="reserveBtn" class="btn" style="width:100%">Rezervovat a zobrazit</button>
           <div id="toast" class="toast">Rezervace uložena. Platí i bez okamžité platby – níže najdete informace k platbě.</div>
-          <div id="error" class="error"></div>
+          <div id="error" class="error" role="alert" aria-live="polite"></div>
         </div>
       </div>
 
@@ -508,12 +506,6 @@ const MSG_BASE = 'SMYSLOHRANI';
 const VS_PREFIX = '2509';
 const POLICY_VERSION = '2025-08-28';
 
-/**
- * ✅ BEZPEČNOST – zapnout až po tom, co v Apps Script nastavíš STRICT_PUBLIC_AUTH = true
- * - PUBLIC_SECRET se NESMÍ dávat do FE. Patří na server. Podepisování se dělá jen pokud máš server-side proxy.
- * - Proto tady necháváme SIGN_REQUESTS = false a používáme: idempotency + honeypot.
- */
-const SIGN_REQUESTS = false; // nechat false (bez proxy to nejde bezpečně)
 /* ======================== */
 
 const el = id => document.getElementById(id);
@@ -535,13 +527,62 @@ let APPLIED_COUPON = null;
 
 let EVENTS = [], selected = null;
 
+// ===== IFRAME AUTO-RESIZE (pro Shoptet) =====
+(function iframeAutoResize(){
+  function getDocHeight(){
+    const b = document.body, d = document.documentElement;
+    return Math.max(
+      b ? b.scrollHeight : 0,
+      b ? b.offsetHeight : 0,
+      d ? d.scrollHeight : 0,
+      d ? d.offsetHeight : 0
+    );
+  }
+
+  function postHeight(){
+    try{
+      const h = getDocHeight();
+      // posíláme i href (parent může filtrovat podle src)
+      window.parent && window.parent.postMessage({
+        type: 'SMYSLOKOUTEK_IFRAME_HEIGHT',
+        height: h,
+        href: window.location.href
+      }, '*');
+    } catch {}
+  }
+
+  // load + resize
+  window.addEventListener('load', postHeight, { once:false });
+  window.addEventListener('resize', postHeight);
+
+  // ResizeObserver (moderní prohlížeče vč. iOS)
+  if (window.ResizeObserver){
+    const ro = new ResizeObserver(() => postHeight());
+    ro.observe(document.documentElement);
+  } else {
+    // fallback
+    setInterval(postHeight, 800);
+  }
+
+  // zpřístupníme helper, ať ho můžeme volat po UI změnách
+  window.__postIframeHeight = postHeight;
+})();
+
 // ===== Helpery =====
 const fmt = n => (Math.round(n*100)/100).toFixed(2); // pro SPAYD
 const kc  = n => String(Math.ceil(Math.max(0, Number(n||0)))); // zobrazení v Kč bez desetinných dle pravidla „nahoru“
 const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
 function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
 function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
-function renderQR(payload){ qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload); spaydEl.textContent=payload; qrEmpty.style.display='none'; qrBox.style.display='block'; }
+function renderQR(payload){
+  qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload);
+  spaydEl.textContent=payload;
+  qrEmpty.style.display='none';
+  qrBox.style.display='block';
+  cashInfo.style.display='none';
+  // po renderu QR se změní výška
+  window.__postIframeHeight && window.__postIframeHeight();
+}
 function sanitizeMsg(s){ let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); t=t.replace(/[^A-Za-z0-9 .,_-]/g,' '); t=t.replace(/\s+/g,' ').trim().toUpperCase(); return t.slice(0,60); }
 function formatForMsg(iso){ const d=new Date(iso); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd} ${hh}:${mi}`; }
 function getPaymentMethod(){ const r=document.querySelector('input[name="pay"]:checked'); return r?r.value:'transfer'; }
@@ -593,12 +634,12 @@ function showBreakdown(calc){
   if (calc.couponDisc)   parts.push(`Kupon: −${kc(calc.couponDisc)} Kč`);
   priceEl.textContent = `Cena: ${kc(calc.total||0)} Kč  •  Délka lekce: ${Number(selected?.duration||90)} min`;
   discHint.textContent = parts.join(' • ');
+  window.__postIframeHeight && window.__postIframeHeight();
 }
 
 async function refreshPricePreview(){
   if (!selected){ priceEl.textContent='Cena: –'; discHint.textContent=''; return; }
 
-  // základní UI (zbývá, viditelnost sourozenců)
   const q = Math.max(1, parseInt(qtyInput.value||'1',10));
   leftTag.textContent = `Zbývá: ${Number(selected.left)} míst`;
   siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
@@ -609,7 +650,6 @@ async function refreshPricePreview(){
   try{
     const res = await previewWith(code);
     if (!res || !res.ok){
-      // pokud byl aplikovaný kupon a teď neprojde, zruš ho
       if (APPLIED_COUPON){
         APPLIED_COUPON = null;
         removeCouponBtn.style.display='none';
@@ -622,6 +662,7 @@ async function refreshPricePreview(){
         if (noCoupon && noCoupon.ok) showBreakdown(noCoupon);
         if (res && res.error) couponMsg.textContent = res.error;
       }
+      window.__postIframeHeight && window.__postIframeHeight();
       return;
     }
     showBreakdown(res);
@@ -630,6 +671,7 @@ async function refreshPricePreview(){
     } else if (code) {
       couponMsg.textContent = 'Kupon je platný – klikněte na „Uplatnit“.';
     }
+    window.__postIframeHeight && window.__postIframeHeight();
   } catch(e){
     // ticho – jen UI
   }
@@ -638,7 +680,11 @@ async function refreshPricePreview(){
 // ===== Načtení a render termínů =====
 function renderTerms(data){
   termsBox.innerHTML='';
-  if(!data.length){ noTerms.style.display='block'; return; }
+  if(!data.length){
+    noTerms.style.display='block';
+    window.__postIframeHeight && window.__postIframeHeight();
+    return;
+  }
   noTerms.style.display='none';
 
   data.forEach((ev,i)=>{
@@ -647,10 +693,6 @@ function renderTerms(data){
     b.type='button';
     b.className='term'+(i===0?' active':'');
     b.dataset.id=ev.id;
-    b.dataset.price=ev.price;
-    b.dataset.left=ev.left;
-    b.dataset.sibling=ev.sibling_discount || 0;
-    b.dataset.duration=duration;
 
     b.innerHTML=`
       <h3>${cz(ev.start)}</h3>
@@ -662,7 +704,6 @@ function renderTerms(data){
       [...termsBox.children].forEach(c=>c.classList.remove('active'));
       b.classList.add('active');
       selected = { ...ev, duration };
-      // změna termínu může zneplatnit kupon
       refreshPricePreview();
     };
 
@@ -671,16 +712,18 @@ function renderTerms(data){
   });
 
   refreshPricePreview();
+  window.__postIframeHeight && window.__postIframeHeight();
 }
 
 async function loadEvents(){
   try{
     const r=await fetch(API_URL+'?action=events', { method:'GET', cache:'no-store' });
     const data=await r.json();
-    EVENTS=data.items ? data.items : data; // toleruje i {ok:true,items:[]}
+    EVENTS=data.items ? data.items : data;
     renderTerms(EVENTS);
   } catch {
     termsBox.innerHTML='<div class="empty">Nepodařilo se načíst termíny. Zkuste to prosím později.</div>';
+    window.__postIframeHeight && window.__postIframeHeight();
   }
 }
 
@@ -700,7 +743,6 @@ function validate(){
   if(!gdprEl.checked){ errBox.textContent='Pro odeslání je nutný souhlas se zpracováním osobních údajů.'; return false; }
   if(!allergenAckEl.checked){ errBox.textContent='Pro odeslání je nutné potvrdit informaci o možných alergenech.'; return false; }
 
-  // honeypot
   if ((websiteEl.value||'').trim()){
     errBox.textContent='Formulář se nepodařilo odeslat. Zkuste to prosím znovu.';
     return false;
@@ -714,15 +756,15 @@ document.getElementById('minus').onclick = ()=>{ qtyInput.stepDown(); refreshPri
 document.getElementById('plus').onclick  = ()=>{ qtyInput.stepUp();  refreshPricePreview(); };
 qtyInput.addEventListener('input', refreshPricePreview);
 siblingsEl.addEventListener('change', refreshPricePreview);
-document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', ()=>{}));
 
 // KUPON: uplatnit / zrušit
 applyCouponBtn.addEventListener('click', async ()=>{
   const code = (couponEl.value||'').trim();
-  if (!code){ couponMsg.textContent='Zadejte kód.'; return; }
+  if (!code){ couponMsg.textContent='Zadejte kód.'; window.__postIframeHeight && window.__postIframeHeight(); return; }
   const res = await previewWith(code);
   if (!res || !res.ok){
     couponMsg.textContent = (res && res.error) ? res.error : 'Kupon nelze použít.';
+    window.__postIframeHeight && window.__postIframeHeight();
     return;
   }
   APPLIED_COUPON = { code };
@@ -739,22 +781,21 @@ removeCouponBtn.addEventListener('click', async ()=>{
   couponMsg.textContent = 'Kupon byl zrušen.';
   const res = await previewWith('');
   if (res && res.ok) showBreakdown(res);
+  window.__postIframeHeight && window.__postIframeHeight();
 });
 
 // ===== Odeslání =====
 btn.addEventListener('click', async ()=>{
-  if(!validate()) return;
+  if(!validate()){ window.__postIframeHeight && window.__postIframeHeight(); return; }
 
   btn.disabled=true; errBox.textContent=''; toast.style.display='none';
 
   const q   = Math.max(1, parseInt(qtyInput.value||'1',10));
-  const pay = getPaymentMethod();
+  const pay = (document.querySelector('input[name="pay"]:checked') || {}).value || 'transfer';
   const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
 
-  // idempotency
   const idemKey = getIdemKey();
 
-  // payload
   const payload = {
     eventId: selected.id,
     eventDuration: Number(selected?.duration || 90),
@@ -765,15 +806,12 @@ btn.addEventListener('click', async ()=>{
     paymentMethod: pay,
     siblings2: siblingsChecked,
     consent: true,
-    consentAt: nowIso(),
+    consentAt: new Date().toISOString(),
     policyVersion: POLICY_VERSION,
     ua: safeStr(navigator.userAgent, 300),
     allergen_notice_ack: !!allergenAckEl.checked,
-    // honeypot
     website: safeStr((websiteEl.value||'').trim(), 120),
-    // idempotency (server cache)
     idempotencyKey: idemKey,
-    // KUPON: posíláme pouze uplatněný kód
     couponCode: APPLIED_COUPON ? APPLIED_COUPON.code : ''
   };
 
@@ -787,15 +825,17 @@ btn.addEventListener('click', async ()=>{
     if(!resp.ok){
       errBox.textContent = (resp.error || 'Rezervace se nepodařila.');
       btn.disabled=false;
+      window.__postIframeHeight && window.__postIframeHeight();
       return;
     }
 
-    // ✅ success -> otočit idempotency key, aby další rezervace byla nová
     rotateIdemKey();
 
-    // Po uložení
     toast.style.display='block';
-    qrBox.style.display='none'; spaydEl.textContent=''; qrEmpty.style.display='none'; cashInfo.style.display='none';
+    qrBox.style.display='none';
+    spaydEl.textContent='';
+    qrEmpty.style.display='none';
+    cashInfo.style.display='none';
 
     const totalServer = Number(resp.total || 0);
 
@@ -805,7 +845,7 @@ btn.addEventListener('click', async ()=>{
       const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${dur}MIN ${(nameEl.value||'')}`;
       const msg       = sanitizeMsg(rawMsg);
       const vs        = makeVS();
-      const payloadSpayd   = spayd(IBAN, totalServer, msg, vs);
+      const payloadSpayd = spayd(IBAN, totalServer, msg, vs);
       renderQR(payloadSpayd);
       priceEl.textContent = `Cena: ${kc(totalServer)} Kč  •  Délka lekce: ${dur} min`;
       discHint.textContent = '';
@@ -813,9 +853,9 @@ btn.addEventListener('click', async ()=>{
       cashInfo.style.display='block';
       priceEl.textContent = `Cena: ${kc(totalServer)} Kč (platba na místě)  •  Délka lekce: ${Number(resp?.event?.duration || selected?.duration || 90)} min`;
       discHint.textContent = '';
+      window.__postIframeHeight && window.__postIframeHeight();
     }
 
-    // Refresh kapacit
     await loadEvents();
     const again = EVENTS.find(e=>e.id===resp.event.id);
     if(again){ selected={...again, duration:Number(again.duration||90)}; refreshPricePreview(); }
@@ -824,6 +864,7 @@ btn.addEventListener('click', async ()=>{
     errBox.textContent='Něco se pokazilo při odeslání. Zkuste to prosím znovu.';
   }finally{
     btn.disabled=false;
+    window.__postIframeHeight && window.__postIframeHeight();
   }
 });
 

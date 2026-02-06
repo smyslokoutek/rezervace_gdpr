@@ -9,7 +9,7 @@
 
   <style>
     :root{
-      /* 2025+ “clean + friendly” tokens */
+      /* 2026+ “clean + friendly” tokens */
       --bg: #f6f7fb;
       --card: #ffffff;
       --ink: #0b0b0b;
@@ -56,31 +56,73 @@
       padding: 22px 18px 40px;
     }
 
+    /* ===== Header 2026+ ===== */
     .hero{
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow);
-      padding: 20px 20px 18px;
+      padding: 18px 20px 16px;
       margin-bottom: 14px;
     }
-
-    .hero h1{
-      margin: 0 0 8px;
-      font-size: 22px;
-      letter-spacing: -0.2px;
+    .hero-top{
+      display:flex;
+      gap: 14px;
+      align-items:flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
-
+    .hero h1{
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: -0.25px;
+    }
     .hero p{
       margin: 0;
       color: var(--muted);
       line-height: 1.45;
     }
-
     .hero .hint{
       margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
+    }
+
+    .steps{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+    .step{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.10);
+      background: rgba(243,244,246,.55);
+      font-size: 12px;
+      color: #111827;
+      font-weight: 750;
+      letter-spacing: .1px;
+      white-space: nowrap;
+    }
+    .dot{
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(107,114,128,.45);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    .step.is-active{
+      border-color: rgba(14,165,233,.35);
+      background: rgba(238,242,255,.75);
+    }
+    .step.is-active .dot{
+      background: var(--brand);
+      box-shadow: none;
     }
 
     .grid{
@@ -108,7 +150,7 @@
       letter-spacing: -0.2px;
     }
 
-    /* Sticky payment on desktop */
+    /* Sticky payment on desktop (will be disabled in iframe mode by JS) */
     .panel--sticky{
       position: sticky;
       top: 14px;
@@ -116,6 +158,7 @@
     @media (max-width: 940px){
       .panel--sticky{position: static}
     }
+    .iframe-mode .panel--sticky{ position: static !important; }
 
     /* Inputs */
     label{font-weight: 650; letter-spacing: -0.1px}
@@ -184,17 +227,28 @@
       line-height: 1.35;
     }
 
-    /* Controls */
+    /* ===== Controls (FIX ALIGNMENT) ===== */
     .controls{
-      display: flex;
+      display:grid;
+      grid-template-columns: 1fr auto;
       gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
+      align-items:end; /* ✅ fix: bottom align */
       margin: 12px 0 10px;
       padding: 12px;
       border-radius: var(--radius-lg);
       background: rgba(243,244,246,.6);
       border: 1px solid rgba(15,23,42,.07);
+    }
+    .controls > div:first-child{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }
+    @media (max-width: 520px){
+      .controls{
+        grid-template-columns: 1fr;
+        align-items:start;
+      }
     }
 
     .stepper{
@@ -238,6 +292,8 @@
       font-size: 12px;
       font-weight: 800;
       letter-spacing: .2px;
+      justify-self:start;
+      align-self:end; /* ✅ fix */
     }
 
     /* Checks */
@@ -350,6 +406,47 @@
       color:#111827;
     }
 
+    /* ===== Summary card (Right panel) ===== */
+    .summary{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(15,23,42,.08);
+      background: rgba(238,242,255,.55);
+    }
+    .summary h3{
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+      color: #111827;
+    }
+    .sum-row{
+      display:flex;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-top: 1px solid rgba(15,23,42,.08);
+      font-size: 14px;
+      color: #111827;
+    }
+    .sum-row:first-of-type{border-top:0}
+    .sum-k{color: var(--muted)}
+    .sum-v{font-weight: 750; text-align:right}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.65);
+      font-size: 13px;
+      color: #111827;
+      margin-top: 10px;
+    }
+    .pill .dot{width:8px;height:8px}
+
     /* honeypot */
     .hp-field{
       position:absolute !important;
@@ -367,6 +464,7 @@
       .panel{padding: 14px}
       .term{padding: 12px}
       .qrwrap img{width: 220px; height: 220px}
+      .steps{justify-content:flex-start}
     }
   </style>
 </head>
@@ -374,9 +472,19 @@
 <body>
   <div class="wrap">
     <div class="hero">
-      <h1>Rezervace smyslohraní</h1>
-      <p>Vyberte termín, počet míst a vyplňte kontakty. <strong>Sleva pro sourozence</strong> je pevná částka za dítě a může se lišit podle termínu.</p>
-      <p class="hint">Rezervace je platná i bez okamžité platby – můžete uhradit později převodem nebo hotově na místě.</p>
+      <div class="hero-top">
+        <div>
+          <h1>Rezervace smyslohraní</h1>
+          <p>Vyberte termín, počet míst a vyplňte kontakty. <strong>Sleva pro sourozence</strong> je pevná částka za dítě a může se lišit podle termínu.</p>
+          <p class="hint">Rezervace je platná i bez okamžité platby – můžete uhradit později převodem nebo hotově na místě.</p>
+        </div>
+
+        <div class="steps" aria-label="Postup rezervace">
+          <div class="step is-active" id="step1"><span class="dot" aria-hidden="true"></span> 1) Termín</div>
+          <div class="step" id="step2"><span class="dot" aria-hidden="true"></span> 2) Kontakty</div>
+          <div class="step" id="step3"><span class="dot" aria-hidden="true"></span> 3) Platba</div>
+        </div>
+      </div>
     </div>
 
     <div class="grid">
@@ -388,8 +496,8 @@
 
         <div class="controls">
           <div>
-            <label>Počet míst</label><br/>
-            <div class="stepper" style="margin-top:6px">
+            <label>Počet míst</label>
+            <div class="stepper">
               <button type="button" id="minus" aria-label="Snížit počet míst">−</button>
               <input id="qty" type="number" min="1" value="1" inputmode="numeric" />
               <button type="button" id="plus" aria-label="Zvýšit počet míst">+</button>
@@ -480,6 +588,27 @@
         <h2>2) Informace k platbě</h2>
         <div class="hint">Hotově → informace „platba na místě“. Převodem → zobrazí se QR kód. Rezervace je potvrzena.</div>
 
+        <!-- Summary (2026+) -->
+        <div class="summary" aria-label="Shrnutí rezervace">
+          <h3>Shrnutí</h3>
+          <div class="sum-row">
+            <div class="sum-k">Termín</div>
+            <div class="sum-v" id="sumWhen">—</div>
+          </div>
+          <div class="sum-row">
+            <div class="sum-k">Počet míst</div>
+            <div class="sum-v" id="sumQty">—</div>
+          </div>
+          <div class="sum-row">
+            <div class="sum-k">Celkem</div>
+            <div class="sum-v" id="sumTotal">—</div>
+          </div>
+          <div class="pill" id="sumPay">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="sumPayText">Způsob platby: —</span>
+          </div>
+        </div>
+
         <div id="qrbox" class="qrbox">
           <div class="qrwrap" style="margin-top:12px">
             <img id="qr" alt="QR platba" />
@@ -518,6 +647,16 @@ const siblingsWrap = el('siblingsWrap'); const siblingsEl = document.getElementB
 const allergenAckEl = document.getElementById('allergenAck');
 const websiteEl = document.getElementById('website'); // honeypot
 
+// Summary UI
+const sumWhen = el('sumWhen');
+const sumQty  = el('sumQty');
+const sumTotal = el('sumTotal');
+const sumPayText = el('sumPayText');
+const sumPayPill = el('sumPay');
+
+// Step UI
+const step1 = el('step1'), step2 = el('step2'), step3 = el('step3');
+
 // KUPON: selektory + stav
 const couponEl = document.getElementById('coupon');
 const couponMsg = document.getElementById('couponMsg');
@@ -526,6 +665,18 @@ const removeCouponBtn = document.getElementById('removeCouponBtn');
 let APPLIED_COUPON = null;
 
 let EVENTS = [], selected = null;
+
+/* ===== IFRAME MODE DETECTION ===== */
+function isIframe(){
+  try { return window.self !== window.top; } catch { return true; }
+}
+function hasUtmIframe(){
+  try { return /utm_source=shoptet/i.test(window.location.search); } catch { return false; }
+}
+(function applyIframeMode(){
+  const iframeMode = isIframe() || hasUtmIframe();
+  if (iframeMode) document.documentElement.classList.add('iframe-mode');
+})();
 
 // ===== IFRAME AUTO-RESIZE (pro Shoptet) =====
 (function iframeAutoResize(){
@@ -542,7 +693,6 @@ let EVENTS = [], selected = null;
   function postHeight(){
     try{
       const h = getDocHeight();
-      // posíláme i href (parent může filtrovat podle src)
       window.parent && window.parent.postMessage({
         type: 'SMYSLOKOUTEK_IFRAME_HEIGHT',
         height: h,
@@ -551,49 +701,89 @@ let EVENTS = [], selected = null;
     } catch {}
   }
 
-  // load + resize
-  window.addEventListener('load', postHeight, { once:false });
+  window.addEventListener('load', postHeight);
   window.addEventListener('resize', postHeight);
 
-  // ResizeObserver (moderní prohlížeče vč. iOS)
   if (window.ResizeObserver){
     const ro = new ResizeObserver(() => postHeight());
     ro.observe(document.documentElement);
   } else {
-    // fallback
     setInterval(postHeight, 800);
   }
 
-  // zpřístupníme helper, ať ho můžeme volat po UI změnách
   window.__postIframeHeight = postHeight;
 })();
 
 // ===== Helpery =====
-const fmt = n => (Math.round(n*100)/100).toFixed(2); // pro SPAYD
-const kc  = n => String(Math.ceil(Math.max(0, Number(n||0)))); // zobrazení v Kč bez desetinných dle pravidla „nahoru“
+const fmt = n => (Math.round(n*100)/100).toFixed(2);
+const kc  = n => String(Math.ceil(Math.max(0, Number(n||0))));
 const cz  = dt => new Date(dt).toLocaleString('cs-CZ',{dateStyle:'medium', timeStyle:'short'});
 function makeVS(){ return (VS_PREFIX + String(Math.floor(Math.random()*999999)).padStart(6,'0')).slice(0,10); }
 function spayd(iban, amount, msg, vs){ return ['SPD*1.0',`ACC:${iban}`,`AM:${fmt(amount)}`,`CC:${CURRENCY}`,`MSG:${encodeURIComponent(msg).toUpperCase()}`,`X-VS:${vs}`].join('*'); }
+
+function sanitizeMsg(s){
+  let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  t=t.replace(/[^A-Za-z0-9 .,_-]/g,' ');
+  t=t.replace(/\s+/g,' ').trim().toUpperCase();
+  return t.slice(0,60);
+}
+function formatForMsg(iso){
+  const d=new Date(iso);
+  const yyyy=d.getFullYear();
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mi=String(d.getMinutes()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+function safeStr(s, max=500){
+  const t=String(s||'');
+  return t.length>max ? t.slice(0,max) : t;
+}
+function normalizePhone(p){ return String(p||'').trim().replace(/\s+/g,''); }
+
+function getPaymentMethod(){
+  const r=document.querySelector('input[name="pay"]:checked');
+  return r?r.value:'transfer';
+}
+function setStep(n){
+  [step1,step2,step3].forEach(x=>x.classList.remove('is-active'));
+  if(n===1) step1.classList.add('is-active');
+  if(n===2) step2.classList.add('is-active');
+  if(n===3) step3.classList.add('is-active');
+}
+function setSummary({whenText='—', qty='—', total='—', pay='—'}){
+  sumWhen.textContent = whenText;
+  sumQty.textContent = qty;
+  sumTotal.textContent = total;
+  sumPayText.textContent = `Způsob platby: ${pay}`;
+  // dot color
+  const dot = sumPayPill.querySelector('.dot');
+  if(dot){
+    dot.style.background = pay.includes('QR') ? 'var(--brand)' : 'rgba(22,163,74,.75)';
+  }
+}
+
 function renderQR(payload){
   qrImg.src='https://quickchart.io/qr?size=240&margin=2&text='+encodeURIComponent(payload);
   spaydEl.textContent=payload;
   qrEmpty.style.display='none';
   qrBox.style.display='block';
   cashInfo.style.display='none';
-  // po renderu QR se změní výška
+  setStep(3);
   window.__postIframeHeight && window.__postIframeHeight();
 }
-function sanitizeMsg(s){ let t=(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); t=t.replace(/[^A-Za-z0-9 .,_-]/g,' '); t=t.replace(/\s+/g,' ').trim().toUpperCase(); return t.slice(0,60); }
-function formatForMsg(iso){ const d=new Date(iso); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); const hh=String(d.getHours()).padStart(2,'0'); const mi=String(d.getMinutes()).padStart(2,'0'); return `${yyyy}-${mm}-${dd} ${hh}:${mi}`; }
-function getPaymentMethod(){ const r=document.querySelector('input[name="pay"]:checked'); return r?r.value:'transfer'; }
 
-function nowIso(){ return new Date().toISOString(); }
-function safeStr(s, max=500){ const t=String(s||''); return t.length>max ? t.slice(0,max) : t; }
-function normalizePhone(p){ return String(p||'').trim().replace(/\s+/g,''); }
+function showCash(){
+  qrBox.style.display='none';
+  qrEmpty.style.display='none';
+  cashInfo.style.display='block';
+  setStep(3);
+  window.__postIframeHeight && window.__postIframeHeight();
+}
 
-// ===== Idempotency key (prevents double submit) =====
+// ===== Idempotency key =====
 function uuidv4(){
-  // good enough for idempotency (not crypto)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c=>{
     const r = Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8);
     return v.toString(16);
@@ -604,11 +794,9 @@ function getIdemKey(){
   if (!k){ k = uuidv4()+uuidv4(); sessionStorage.setItem('idemKey', k); }
   return k;
 }
-function rotateIdemKey(){
-  sessionStorage.removeItem('idemKey');
-}
+function rotateIdemKey(){ sessionStorage.removeItem('idemKey'); }
 
-// ===== Serverový náhled ceny (včetně kuponu) =====
+// ===== Serverový náhled ceny =====
 async function previewWith(code){
   if (!selected) return null;
   const q = Math.max(1, parseInt(qtyInput.value||'1',10));
@@ -627,22 +815,46 @@ async function previewWith(code){
 }
 
 function showBreakdown(calc){
-  if (!calc || !calc.ok){ priceEl.textContent='Cena: –'; discHint.textContent=''; return; }
+  if (!calc || !calc.ok){
+    priceEl.textContent='Cena: –';
+    discHint.textContent='';
+    setSummary({ whenText: selected ? cz(selected.start) : '—', qty: qtyInput.value || '—', total: '—', pay: getPaymentMethod()==='transfer'?'Převodem (QR)':'Hotově na místě' });
+    return;
+  }
   const parts = [];
   parts.push(`Základ: ${kc(calc.base||0)} Kč`);
   if (calc.siblingsDisc) parts.push(`Sourozenci: −${kc(calc.siblingsDisc)} Kč`);
   if (calc.couponDisc)   parts.push(`Kupon: −${kc(calc.couponDisc)} Kč`);
+
   priceEl.textContent = `Cena: ${kc(calc.total||0)} Kč  •  Délka lekce: ${Number(selected?.duration||90)} min`;
   discHint.textContent = parts.join(' • ');
+
+  const pay = getPaymentMethod()==='transfer' ? 'Převodem (QR)' : 'Hotově na místě';
+  setSummary({
+    whenText: cz(selected.start),
+    qty: `${Math.max(1, parseInt(qtyInput.value||'1',10))}`,
+    total: `${kc(calc.total||0)} Kč`,
+    pay
+  });
+
   window.__postIframeHeight && window.__postIframeHeight();
 }
 
 async function refreshPricePreview(){
-  if (!selected){ priceEl.textContent='Cena: –'; discHint.textContent=''; return; }
+  if (!selected){
+    priceEl.textContent='Cena: –';
+    discHint.textContent='';
+    setSummary({ whenText:'—', qty:'—', total:'—', pay:getPaymentMethod()==='transfer'?'Převodem (QR)':'Hotově na místě' });
+    return;
+  }
 
   const q = Math.max(1, parseInt(qtyInput.value||'1',10));
   leftTag.textContent = `Zbývá: ${Number(selected.left)} míst`;
   siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
+
+  // krok 1/2 highlight podle toho, jestli jsou vyplněné kontakty
+  const hasContacts = (emailEl.value||'').trim() && normalizePhone(phoneEl.value||'').length >= 6;
+  setStep(hasContacts ? 2 : 1);
 
   couponMsg.textContent = '';
 
@@ -665,19 +877,22 @@ async function refreshPricePreview(){
       window.__postIframeHeight && window.__postIframeHeight();
       return;
     }
+
     showBreakdown(res);
+
     if (APPLIED_COUPON){
       couponMsg.textContent = `Kupon „${APPLIED_COUPON.code}“ je uplatněn.`;
     } else if (code) {
       couponMsg.textContent = 'Kupon je platný – klikněte na „Uplatnit“.';
     }
+
     window.__postIframeHeight && window.__postIframeHeight();
   } catch(e){
     // ticho – jen UI
   }
 }
 
-// ===== Načtení a render termínů =====
+// ===== Render termínů =====
 function renderTerms(data){
   termsBox.innerHTML='';
   if(!data.length){
@@ -747,7 +962,6 @@ function validate(){
     errBox.textContent='Formulář se nepodařilo odeslat. Zkuste to prosím znovu.';
     return false;
   }
-
   return true;
 }
 
@@ -756,6 +970,10 @@ document.getElementById('minus').onclick = ()=>{ qtyInput.stepDown(); refreshPri
 document.getElementById('plus').onclick  = ()=>{ qtyInput.stepUp();  refreshPricePreview(); };
 qtyInput.addEventListener('input', refreshPricePreview);
 siblingsEl.addEventListener('change', refreshPricePreview);
+
+emailEl.addEventListener('input', refreshPricePreview);
+phoneEl.addEventListener('input', refreshPricePreview);
+document.querySelectorAll('input[name="pay"]').forEach(r => r.addEventListener('change', refreshPricePreview));
 
 // KUPON: uplatnit / zrušit
 applyCouponBtn.addEventListener('click', async ()=>{
@@ -791,7 +1009,7 @@ btn.addEventListener('click', async ()=>{
   btn.disabled=true; errBox.textContent=''; toast.style.display='none';
 
   const q   = Math.max(1, parseInt(qtyInput.value||'1',10));
-  const pay = (document.querySelector('input[name="pay"]:checked') || {}).value || 'transfer';
+  const pay = getPaymentMethod();
   const siblingsChecked = (q >= 2) && !!siblingsEl.checked;
 
   const idemKey = getIdemKey();
@@ -839,21 +1057,29 @@ btn.addEventListener('click', async ()=>{
 
     const totalServer = Number(resp.total || 0);
 
+    // update summary to final server total
+    const payLabel = pay === 'transfer' ? 'Převodem (QR)' : 'Hotově na místě';
+    setSummary({
+      whenText: cz(resp.event.start),
+      qty: `${q}`,
+      total: `${kc(totalServer)} Kč`,
+      pay: payLabel
+    });
+
     if (pay === 'transfer') {
       const whenPlain = formatForMsg(resp.event.start);
       const dur = Number(resp?.event?.duration || selected?.duration || 90);
-      const rawMsg    = `${MSG_BASE} ${whenPlain} ${q} MISTA ${dur}MIN ${(nameEl.value||'')}`;
-      const msg       = sanitizeMsg(rawMsg);
-      const vs        = makeVS();
+      const rawMsg = `${MSG_BASE} ${whenPlain} ${q} MISTA ${dur}MIN ${(nameEl.value||'')}`;
+      const msg = sanitizeMsg(rawMsg);
+      const vs  = makeVS();
       const payloadSpayd = spayd(IBAN, totalServer, msg, vs);
       renderQR(payloadSpayd);
       priceEl.textContent = `Cena: ${kc(totalServer)} Kč  •  Délka lekce: ${dur} min`;
       discHint.textContent = '';
     } else {
-      cashInfo.style.display='block';
+      showCash();
       priceEl.textContent = `Cena: ${kc(totalServer)} Kč (platba na místě)  •  Délka lekce: ${Number(resp?.event?.duration || selected?.duration || 90)} min`;
       discHint.textContent = '';
-      window.__postIframeHeight && window.__postIframeHeight();
     }
 
     await loadEvents();

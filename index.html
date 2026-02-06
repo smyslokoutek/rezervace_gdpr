@@ -227,12 +227,12 @@
       line-height: 1.35;
     }
 
-    /* ===== Controls (FIX ALIGNMENT) ===== */
+    /* ===== Controls (FIX ALIGNMENT + FIX STEPPER WIDTH) ===== */
     .controls{
       display:grid;
       grid-template-columns: 1fr auto;
       gap: 12px;
-      align-items:end; /* ✅ fix: bottom align */
+      align-items:end; /* ✅ bottom align */
       margin: 12px 0 10px;
       padding: 12px;
       border-radius: var(--radius-lg);
@@ -243,6 +243,7 @@
       display:flex;
       flex-direction:column;
       gap: 6px;
+      min-width: 0;
     }
     @media (max-width: 520px){
       .controls{
@@ -252,14 +253,17 @@
     }
 
     .stepper{
-      display: flex;
+      display: inline-flex;       /* ✅ */
       align-items: center;
+      width: fit-content;         /* ✅ neroste do šířky */
+      max-width: 100%;
       border: 1px solid rgba(15,23,42,.12);
       border-radius: 14px;
       overflow: hidden;
       background: #fff;
     }
     .stepper button{
+      flex: 0 0 42px;             /* ✅ */
       border: 0;
       background: #f3f4f6;
       width: 42px;
@@ -272,13 +276,21 @@
     .stepper button:hover{background:#e5e7eb}
     .stepper button:focus-visible{outline:none; box-shadow: inset var(--focus)}
     .stepper input{
+      flex: 0 0 74px;             /* ✅ fixní šířka inputu */
       width: 74px;
+      min-width: 74px;
       height: 42px;
       border: 0;
       text-align: center;
       font-size: 16px;
       outline: none;
+      padding: 0;                 /* ✅ */
+      display: block;
     }
+    /* zruš default spinnery (čistější UI) */
+    .stepper input::-webkit-outer-spin-button,
+    .stepper input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+    .stepper input[type=number]{ -moz-appearance: textfield; }
 
     .tag{
       display: inline-flex;
@@ -293,7 +305,12 @@
       font-weight: 800;
       letter-spacing: .2px;
       justify-self:start;
-      align-self:end; /* ✅ fix */
+      align-self:end;             /* ✅ */
+      white-space: nowrap;
+      margin-bottom: 2px;         /* ✅ optické dorovnání vůči stepperu */
+    }
+    @media (max-width: 520px){
+      .tag{align-self:start; margin-bottom: 0;}
     }
 
     /* Checks */
@@ -757,7 +774,6 @@ function setSummary({whenText='—', qty='—', total='—', pay='—'}){
   sumQty.textContent = qty;
   sumTotal.textContent = total;
   sumPayText.textContent = `Způsob platby: ${pay}`;
-  // dot color
   const dot = sumPayPill.querySelector('.dot');
   if(dot){
     dot.style.background = pay.includes('QR') ? 'var(--brand)' : 'rgba(22,163,74,.75)';
@@ -818,7 +834,12 @@ function showBreakdown(calc){
   if (!calc || !calc.ok){
     priceEl.textContent='Cena: –';
     discHint.textContent='';
-    setSummary({ whenText: selected ? cz(selected.start) : '—', qty: qtyInput.value || '—', total: '—', pay: getPaymentMethod()==='transfer'?'Převodem (QR)':'Hotově na místě' });
+    setSummary({
+      whenText: selected ? cz(selected.start) : '—',
+      qty: qtyInput.value || '—',
+      total: '—',
+      pay: getPaymentMethod()==='transfer'?'Převodem (QR)':'Hotově na místě'
+    });
     return;
   }
   const parts = [];
@@ -852,7 +873,6 @@ async function refreshPricePreview(){
   leftTag.textContent = `Zbývá: ${Number(selected.left)} míst`;
   siblingsWrap.style.display = (q >= 2) ? 'flex' : 'none';
 
-  // krok 1/2 highlight podle toho, jestli jsou vyplněné kontakty
   const hasContacts = (emailEl.value||'').trim() && normalizePhone(phoneEl.value||'').length >= 6;
   setStep(hasContacts ? 2 : 1);
 
@@ -1057,7 +1077,6 @@ btn.addEventListener('click', async ()=>{
 
     const totalServer = Number(resp.total || 0);
 
-    // update summary to final server total
     const payLabel = pay === 'transfer' ? 'Převodem (QR)' : 'Hotově na místě';
     setSummary({
       whenText: cz(resp.event.start),

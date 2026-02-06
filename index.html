@@ -3,174 +3,501 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Rezervace Smyslokoutek – výběr termínu & platba</title>
+  <title>Rezervace Smyslokoutek – výběr termínu &amp; platba</title>
   <meta name="theme-color" content="#ffffff" />
   <meta name="color-scheme" content="light only" />
+
   <style>
     :root{
-      --ink:#0b0b0b; --muted:#6b7280; --ok:#16a34a; --bad:#dc2626; --brand:#0ea5e9;
-      --card:#fff; --bg:#f6f7fb; --soft:#eef2ff; --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.08)
+      /* 2025+ “clean + friendly” tokens */
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ink: #0b0b0b;
+      --muted: #6b7280;
+      --line: rgba(15, 23, 42, .10);
+
+      --brand: #0ea5e9;
+      --brand-ink: #075985;
+      --ok: #16a34a;
+      --bad: #dc2626;
+
+      --soft: #eef2ff;
+      --soft2: #f3f4f6;
+
+      --radius-xl: 18px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+
+      --shadow: 0 10px 30px rgba(0,0,0,.08);
+      --shadow2: 0 6px 18px rgba(0,0,0,.08);
+
+      --focus: 0 0 0 4px rgba(14,165,233,.18);
     }
-    html{box-sizing:border-box}*,*::before,*::after{box-sizing:inherit}
-    input[type="text"],input[type="email"],input[type="tel"]{width:100%;max-width:100%;display:block;-webkit-appearance:none;appearance:none}
-    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif}
-    .wrap{max-width:980px;margin:0 auto;padding:20px}
-    .hero{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
-    .hero h1{margin:0 0 6px;font-size:22px}.hero p{margin:0;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
-    @media (max-width:900px){.grid{grid-template-columns:1fr}}
-    .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;overflow:hidden}
-    .term-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:700px){.term-list{grid-template-columns:1fr}}
-    .term{border:1px solid #e5e7eb;border-radius:14px;padding:14px;cursor:pointer;background:#fff;transition:.15s}
-    .term:hover{border-color:#c7d2fe;background:var(--soft)}.term.active{outline:2px solid var(--brand);border-color:transparent;background:var(--soft)}
-    .term h3{margin:0 0 8px;font-size:16px}.term .meta{font-size:13px;color:var(--muted)}
-    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0}
-    .stepper{display:flex;align-items:center;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
-    .stepper button{border:0;background:#f3f4f6;width:40px;height:40px;font-size:20px;cursor:pointer}
-    .stepper input{width:70px;height:40px;border:0;text-align:center;font-size:16px}
-    label{font-weight:600}
-    input[type="text"],input[type="email"],input[type="tel"]{padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
-    .check{display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:14px}
-    .check input{margin-top:2px}
-    .price{font-weight:700}.hint{color:var(--muted);font-size:13px}
-    .btn{appearance:none;border:0;border-radius:12px;background:#111;color:#fff;padding:12px 16px;font-weight:700;cursor:pointer}
-    .btn[disabled]{opacity:.6;cursor:not-allowed}
-    .note{font-size:13px;color:var(--muted)}
+
+    html{box-sizing:border-box}
+    *,*::before,*::after{box-sizing:inherit}
+
+    html,body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family: system-ui, -apple-system, Segoe UI, Inter, Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a{color: var(--brand-ink); text-decoration: underline; text-underline-offset: 2px}
+    a:hover{color: #0369a1}
+
+    .wrap{
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 22px 18px 40px;
+    }
+
+    .hero{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      padding: 20px 20px 18px;
+      margin-bottom: 14px;
+    }
+
+    .hero h1{
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: -0.2px;
+    }
+
+    .hero p{
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .hero .hint{
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid{
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 940px){
+      .grid{grid-template-columns: 1fr}
+    }
+
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow2);
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .panel h2{
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: -0.2px;
+    }
+
+    /* Sticky payment on desktop */
+    .panel--sticky{
+      position: sticky;
+      top: 14px;
+    }
+    @media (max-width: 940px){
+      .panel--sticky{position: static}
+    }
+
+    /* Inputs */
+    label{font-weight: 650; letter-spacing: -0.1px}
+    input[type="text"], input[type="email"], input[type="tel"], input[type="number"]{
+      width: 100%;
+      max-width: 100%;
+      display: block;
+      padding: 12px 12px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      border-radius: var(--radius-sm);
+      font-size: 16px; /* iOS anti-zoom */
+      background: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: box-shadow .12s ease, border-color .12s ease, transform .12s ease;
+    }
+    input:focus{
+      border-color: rgba(14,165,233,.45);
+      box-shadow: var(--focus);
+    }
+
+    /* Term list cards */
+    .term-list{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 740px){
+      .term-list{grid-template-columns: 1fr}
+    }
+
+    .term{
+      border: 1px solid rgba(15, 23, 42, .12);
+      border-radius: var(--radius-lg);
+      padding: 14px 14px 12px;
+      cursor: pointer;
+      background: #fff;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+      text-align: left;
+    }
+    .term:hover{
+      border-color: rgba(14,165,233,.35);
+      background: linear-gradient(180deg, #ffffff 0%, rgba(238,242,255,.55) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(2, 132, 199, .10);
+    }
+    .term:focus-visible{
+      outline: none;
+      box-shadow: var(--focus);
+      border-color: rgba(14,165,233,.55);
+    }
+    .term.active{
+      border-color: rgba(14,165,233,.75);
+      box-shadow: 0 10px 28px rgba(14,165,233,.16);
+      background: linear-gradient(180deg, rgba(238,242,255,.72) 0%, #ffffff 100%);
+    }
+    .term h3{
+      margin: 0 0 8px;
+      font-size: 15.5px;
+      letter-spacing: -0.1px;
+    }
+    .term .meta{
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    /* Controls */
+    .controls{
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0 10px;
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      background: rgba(243,244,246,.6);
+      border: 1px solid rgba(15,23,42,.07);
+    }
+
+    .stepper{
+      display: flex;
+      align-items: center;
+      border: 1px solid rgba(15,23,42,.12);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .stepper button{
+      border: 0;
+      background: #f3f4f6;
+      width: 42px;
+      height: 42px;
+      font-size: 20px;
+      cursor: pointer;
+      color: #111827;
+      transition: background .12s ease;
+    }
+    .stepper button:hover{background:#e5e7eb}
+    .stepper button:focus-visible{outline:none; box-shadow: inset var(--focus)}
+    .stepper input{
+      width: 74px;
+      height: 42px;
+      border: 0;
+      text-align: center;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .tag{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid rgba(22,163,74,.20);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    /* Checks */
+    .check{
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.35;
+      color: #111827;
+    }
+    .check input{
+      margin-top: 3px;
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Coupon row */
+    .coupon-row{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .coupon-row input{flex: 1 1 220px}
+
+    /* Buttons */
+    .btn{
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      background: #0b0b0b;
+      color: #fff;
+      padding: 12px 16px;
+      font-weight: 850;
+      cursor: pointer;
+      transition: transform .10s ease, box-shadow .10s ease, opacity .10s ease, background .10s ease;
+      letter-spacing: .1px;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(0,0,0,.14);
+    }
+    .btn:active{transform: translateY(0px)}
+    .btn:focus-visible{outline:none; box-shadow: var(--focus), 0 12px 26px rgba(0,0,0,.14)}
+    .btn[disabled]{opacity:.55; cursor:not-allowed; transform:none; box-shadow:none}
+
+    .btn--muted{
+      background: #6b7280;
+    }
+    .btn--muted:hover{background:#4b5563}
+
+    .hint{color: var(--muted); font-size: 13px; line-height: 1.4}
+    .note{font-size: 13px; color: var(--muted); line-height: 1.4}
+    .price{font-weight: 850; letter-spacing: -0.1px}
+
+    .error{
+      color: var(--bad);
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .toast{
+      display: none;
+      margin-top: 10px;
+      border-left: 4px solid var(--ok);
+      background: #ecfdf5;
+      padding: 10px 12px;
+      border-radius: 12px;
+      color: #065f46;
+      border: 1px solid rgba(16,185,129,.18);
+    }
+
+    .empty{
+      border: 1px dashed rgba(15,23,42,.22);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.65);
+    }
+
+    /* Payment panel */
+    .pay-card{
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(15,23,42,.08);
+      background: rgba(243,244,246,.55);
+      margin-top: 10px;
+    }
+
     .qrbox{display:none;margin-top:10px}
-    .qrwrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
-    .qrwrap img{width:240px;height:240px;box-shadow:var(--shadow);border-radius:12px;background:#fff}
-    code{background:#f3f4f6;padding:8px;border-radius:8px;display:block;word-break:break-all}
-    .tag{display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
-    .error{color:#dc2626;font-weight:600}
-    .toast{display:none;margin-top:8px;border-left:4px solid var(--ok);background:#ecfdf5;padding:10px;border-radius:8px}
-    .empty{border:1px dashed #d1d5db;border-radius:12px;padding:16px;text-align:center;color:var(--muted)}
+    .qrwrap{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    .qrwrap img{
+      width: 240px;
+      height: 240px;
+      box-shadow: var(--shadow2);
+      border-radius: 16px;
+      background:#fff;
+      border: 1px solid rgba(15,23,42,.08);
+    }
+
+    code{
+      background:#ffffff;
+      border: 1px solid rgba(15,23,42,.10);
+      padding: 10px;
+      border-radius: 12px;
+      display:block;
+      word-break: break-all;
+      font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color:#111827;
+    }
+
     /* honeypot */
-    .hp-field{position:absolute !important; left:-99999px !important; top:auto !important; width:1px !important; height:1px !important; overflow:hidden !important;}
+    .hp-field{
+      position:absolute !important;
+      left:-99999px !important;
+      top:auto !important;
+      width:1px !important;
+      height:1px !important;
+      overflow:hidden !important;
+    }
+
+    /* Mobile spacing */
+    @media (max-width: 520px){
+      .wrap{padding: 16px 12px 30px}
+      .hero{padding: 16px}
+      .panel{padding: 14px}
+      .term{padding: 12px}
+      .qrwrap img{width: 220px; height: 220px}
+    }
   </style>
 </head>
+
 <body>
-<div class="wrap">
-  <div class="hero">
-    <h1>Rezervace smyslohraní</h1>
-    <p>Vyberte termín, počet míst a vyplňte kontakty. <strong>Sleva pro sourozence</strong> je pevná částka za dítě a může se lišit podle termínu.</p>
-    <p class="hint" style="margin-top:6px;">Rezervace je platná i bez okamžité platby – můžete uhradit později převodem nebo hotově na místě.</p>
-  </div>
-
-  <div class="grid">
-    <div class="panel">
-      <h2 style="margin:0 0 10px;">1) Vyberte termín</h2>
-      <div id="terms" class="term-list"></div>
-      <div id="noTerms" class="empty" style="display:none;">Momentálně nejsou vypsané žádné budoucí termíny.</div>
-
-      <div class="controls">
-        <div>
-          <label>Počet míst</label><br/>
-          <div class="stepper">
-            <button type="button" id="minus">−</button>
-            <input id="qty" type="number" min="1" value="1" />
-            <button type="button" id="plus">+</button>
-          </div>
-        </div>
-        <div><span class="tag" id="leftTag">Zbývá: −</span></div>
-      </div>
-
-      <!-- Sourozenci -->
-      <div id="siblingsWrap" class="check" style="display:none;">
-        <input id="siblings2" type="checkbox" />
-        <label for="siblings2">Jde o <strong>sourozence</strong> (uplatní se sleva – pevná částka za dítě).</label>
-      </div>
-
-      <div style="margin-top:10px">
-        <label>Jméno dítěte (nebo dětí)</label>
-        <input id="name" type="text" placeholder="např. Anna a Tomáš" />
-      </div>
-      <div style="margin-top:10px">
-        <label>Telefon (povinné)</label>
-        <input id="phone" type="tel" placeholder="např. 777 123 456" />
-      </div>
-      <div style="margin-top:10px">
-        <label>E-mail pro potvrzení</label>
-        <input id="email" type="email" placeholder="např. maminka@..." />
-        <div class="hint">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
-      </div>
-
-      <!-- honeypot (bot trap) -->
-      <div class="hp-field" aria-hidden="true">
-        <label for="website">Website</label>
-        <input id="website" type="text" autocomplete="off" tabindex="-1" />
-      </div>
-
-      <!-- KUPON: pole + tlačítka -->
-      <div style="margin-top:10px">
-        <label>Slevový kód</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="coupon" type="text" placeholder="např. ABC20" style="flex:1 1 220px" />
-          <button id="applyCouponBtn" type="button" class="btn" style="padding:10px 14px">Uplatnit</button>
-          <button id="removeCouponBtn" type="button" class="btn" style="padding:10px 14px; display:none; background:#6b7280">Zrušit kupon</button>
-        </div>
-        <div id="couponMsg" class="hint"></div>
-      </div>
-
-      <!-- Způsob platby -->
-      <div class="check" style="margin-top:12px;">
-        <label style="font-weight:600;margin-right:12px;">Způsob platby</label>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <label><input type="radio" name="pay" value="cash" checked> Hotově na místě</label>
-          <label><input type="radio" name="pay" value="transfer"> Převodem (QR)</label>
-        </div>
-      </div>
-
-      <!-- GDPR -->
-      <div class="check">
-        <input id="gdpr" type="checkbox" />
-        <label for="gdpr">
-          Souhlasím se <a href="https://www.smyslokoutek.cz/podminky-ochrany-osobnich-udaju/" target="_blank" rel="noopener">zpracováním osobních údajů</a>
-          (Tereza Unarová, info@smyslokoutek.cz) provozovatelem Smyslokoutek pro účely vyřízení rezervace a související komunikace.
-        </label>
-      </div>
-
-      <!-- Alergeny – povinné potvrzení -->
-      <div class="check">
-        <input id="allergenAck" type="checkbox" />
-        <label for="allergenAck">
-          Beru na vědomí, že lekce smyslohraní mohou obsahovat běžné alergeny (např. mouka/lepek, mléko, vejce, ořechy, sója, citrusy, potravinářská barviva, latex).
-          Informace o alergenech budou vždy před lekcí dostupné u pořadatele.
-        </label>
-      </div>
-
-      <div style="margin-top:12px">
-        <div id="price" class="price">Cena: –</div>
-        <div id="discountHint" class="hint"></div>
-      </div>
-
-      <div style="margin-top:14px">
-        <button id="reserveBtn" class="btn">Rezervovat a zobrazit</button>
-        <div id="toast" class="toast">Rezervace uložena. Platí i bez okamžité platby – níže najdete informace k platbě.</div>
-        <div id="error" class="error"></div>
-      </div>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Rezervace smyslohraní</h1>
+      <p>Vyberte termín, počet míst a vyplňte kontakty. <strong>Sleva pro sourozence</strong> je pevná částka za dítě a může se lišit podle termínu.</p>
+      <p class="hint">Rezervace je platná i bez okamžité platby – můžete uhradit později převodem nebo hotově na místě.</p>
     </div>
 
-    <div class="panel">
-      <h2 style="margin:0 0 10px;">2) Informace k platbě</h2>
-      <div class="hint">Hotově → informace „platba na místě“. Převodem → zobrazí se QR kód. Rezervace je potvrzena.</div>
+    <div class="grid">
+      <div class="panel">
+        <h2>1) Vyberte termín</h2>
 
-      <div id="qrbox" class="qrbox">
-        <div class="qrwrap">
-          <img id="qr" alt="QR platba" />
-          <div style="flex:1 1 280px">
-            <div><strong>SPAYD řetězec</strong></div>
-            <code id="spayd"></code>
-            <div class="note">Pokud by sken nešel, použijte běžný převod a zadejte částku a VS ručně.</div>
+        <div id="terms" class="term-list"></div>
+        <div id="noTerms" class="empty" style="display:none;">Momentálně nejsou vypsané žádné budoucí termíny.</div>
+
+        <div class="controls">
+          <div>
+            <label>Počet míst</label><br/>
+            <div class="stepper" style="margin-top:6px">
+              <button type="button" id="minus" aria-label="Snížit počet míst">−</button>
+              <input id="qty" type="number" min="1" value="1" inputmode="numeric" />
+              <button type="button" id="plus" aria-label="Zvýšit počet míst">+</button>
+            </div>
           </div>
+          <div><span class="tag" id="leftTag">Zbývá: −</span></div>
+        </div>
+
+        <!-- Sourozenci -->
+        <div id="siblingsWrap" class="check" style="display:none;">
+          <input id="siblings2" type="checkbox" />
+          <label for="siblings2">Jde o <strong>sourozence</strong> (uplatní se sleva – pevná částka za dítě).</label>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Jméno dítěte (nebo dětí)</label>
+          <input id="name" type="text" placeholder="např. Anna a Tomáš" autocomplete="name" />
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Telefon (povinné)</label>
+          <input id="phone" type="tel" placeholder="např. 777 123 456" inputmode="tel" autocomplete="tel" />
+        </div>
+
+        <div style="margin-top:12px">
+          <label>E-mail pro potvrzení</label>
+          <input id="email" type="email" placeholder="např. maminka@..." inputmode="email" autocomplete="email" />
+          <div class="hint" style="margin-top:6px">Na tento e-mail přijde potvrzení a soubor <em>.ics</em> pro kalendář.</div>
+        </div>
+
+        <!-- honeypot (bot trap) -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" type="text" autocomplete="off" tabindex="-1" />
+        </div>
+
+        <!-- Kupon -->
+        <div style="margin-top:12px">
+          <label>Slevový kód</label>
+          <div class="coupon-row" style="margin-top:6px">
+            <input id="coupon" type="text" placeholder="např. ABC20" autocomplete="off" />
+            <button id="applyCouponBtn" type="button" class="btn" style="padding:11px 14px">Uplatnit</button>
+            <button id="removeCouponBtn" type="button" class="btn btn--muted" style="padding:11px 14px; display:none;">Zrušit kupon</button>
+          </div>
+          <div id="couponMsg" class="hint" style="margin-top:6px"></div>
+        </div>
+
+        <!-- Způsob platby -->
+        <div class="check" style="margin-top:14px;">
+          <label style="font-weight:650;margin-right:10px;">Způsob platby</label>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <label style="font-weight:600"><input type="radio" name="pay" value="cash" checked> Hotově na místě</label>
+            <label style="font-weight:600"><input type="radio" name="pay" value="transfer"> Převodem (QR)</label>
+          </div>
+        </div>
+
+        <!-- GDPR -->
+        <div class="check">
+          <input id="gdpr" type="checkbox" />
+          <label for="gdpr">
+            Souhlasím se <a href="https://www.smyslokoutek.cz/podminky-ochrany-osobnich-udaju/" target="_blank" rel="noopener">zpracováním osobních údajů</a>
+            (Tereza Unarová, info@smyslokoutek.cz) provozovatelem Smyslokoutek pro účely vyřízení rezervace a související komunikace.
+          </label>
+        </div>
+
+        <!-- Alergeny -->
+        <div class="check">
+          <input id="allergenAck" type="checkbox" />
+          <label for="allergenAck">
+            Beru na vědomí, že lekce smyslohraní mohou obsahovat běžné alergeny (např. mouka/lepek, mléko, vejce, ořechy, sója, citrusy, potravinářská barviva, latex).
+            Informace o alergenech budou vždy před lekcí dostupné u pořadatele.
+          </label>
+        </div>
+
+        <div class="pay-card" style="margin-top:14px">
+          <div id="price" class="price">Cena: –</div>
+          <div id="discountHint" class="hint" style="margin-top:4px"></div>
+        </div>
+
+        <div style="margin-top:14px">
+          <button id="reserveBtn" class="btn" style="width:100%">Rezervovat a zobrazit</button>
+          <div id="toast" class="toast">Rezervace uložena. Platí i bez okamžité platby – níže najdete informace k platbě.</div>
+          <div id="error" class="error"></div>
         </div>
       </div>
 
-      <div id="qrEmpty" class="empty">QR kód se zobrazí po potvrzení rezervace, pokud zvolíte platbu převodem.</div>
-      <div id="cashInfo" class="empty" style="display:none;">Platba <strong>hotově na místě</strong>. Rezervace je potvrzena – u pokladny nahlaste jméno a termín.</div>
+      <div class="panel panel--sticky">
+        <h2>2) Informace k platbě</h2>
+        <div class="hint">Hotově → informace „platba na místě“. Převodem → zobrazí se QR kód. Rezervace je potvrzena.</div>
+
+        <div id="qrbox" class="qrbox">
+          <div class="qrwrap" style="margin-top:12px">
+            <img id="qr" alt="QR platba" />
+            <div style="flex:1 1 280px">
+              <div style="font-weight:800; letter-spacing:-0.1px; margin-bottom:8px">SPAYD řetězec</div>
+              <code id="spayd"></code>
+              <div class="note" style="margin-top:8px">Pokud by sken nešel, použijte běžný převod a zadejte částku a VS ručně.</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="qrEmpty" class="empty" style="margin-top:12px">QR kód se zobrazí po potvrzení rezervace, pokud zvolíte platbu převodem.</div>
+        <div id="cashInfo" class="empty" style="display:none;margin-top:12px">Platba <strong>hotově na místě</strong>. Rezervace je potvrzena – u pokladny nahlaste jméno a termín.</div>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
 /* ===== KONFIGURACE ===== */
@@ -451,10 +778,7 @@ btn.addEventListener('click', async ()=>{
   };
 
   try{
-    // podpis requestů: bez server-side proxy to nedává smysl bezpečně, necháváme vypnuto
-    const url = API_URL;
-
-    const resp = await fetch(url, {
+    const resp = await fetch(API_URL, {
       method:'POST',
       headers:{ 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
